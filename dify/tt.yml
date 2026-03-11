@@ -1,0 +1,1469 @@
+app:
+  description: ''
+  icon: 🤖
+  icon_background: '#FFEAD5'
+  mode: workflow
+  name: tt
+  use_icon_as_answer_icon: false
+dependencies:
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/google:0.0.9@d360bbc433f39be1b11909cb9c32e6be4a17ea06af083f9e1c7613bb802bf517
+    version: null
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/openai:0.2.8@aae2be0913b8c6f0b80cff58e08d7a8b4c214569b41778413fcaea204561ff16
+    version: null
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/tongyi:0.1.30@04fa1c28928e92e425bc946f8f4f5c8f14d0531786c384f128c0e9445f1eee56
+    version: null
+kind: app
+version: 0.5.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .JPG
+      - .JPEG
+      - .PNG
+      - .GIF
+      - .WEBP
+      - .SVG
+      allowed_file_types:
+      - image
+      allowed_file_upload_methods:
+      - local_file
+      - remote_url
+      enabled: false
+      fileUploadConfig:
+        attachment_image_file_size_limit: 2
+        audio_file_size_limit: 50
+        batch_count_limit: 5
+        file_size_limit: 15
+        file_upload_limit: 50
+        image_file_batch_limit: 10
+        image_file_size_limit: 10
+        single_chunk_attachment_limit: 10
+        video_file_size_limit: 100
+        workflow_file_upload_limit: 10
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: ''
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: knowledge-retrieval
+        targetType: llm
+      id: 1772070474817-source-1772072180986-target
+      selected: false
+      source: '1772070474817'
+      sourceHandle: source
+      target: '1772072180986'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: start
+        targetType: llm
+      id: 1771997136096-source-1772072180986-target
+      selected: false
+      source: '1771997136096'
+      sourceHandle: source
+      target: '1772072180986'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: llm
+      id: 1771997136096-source-1772073043326-target
+      selected: false
+      source: '1771997136096'
+      sourceHandle: source
+      target: '1772073043326'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: knowledge-retrieval
+      id: 1772073043326-source-1772070474817-target
+      selected: false
+      source: '1772073043326'
+      sourceHandle: source
+      target: '1772070474817'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: http-request
+      id: 1771997136096-source-1772077046036-target
+      selected: false
+      source: '1771997136096'
+      sourceHandle: source
+      target: '1772077046036'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: http-request
+        targetType: code
+      id: 1772077046036-source-1772077747357-target
+      selected: false
+      source: '1772077046036'
+      sourceHandle: source
+      target: '1772077747357'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: code
+        targetType: iteration
+      id: 1772077747357-source-1772081932104-target
+      selected: false
+      source: '1772077747357'
+      sourceHandle: source
+      target: '1772081932104'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: true
+        isInLoop: false
+        iteration_id: '1772081932104'
+        sourceType: iteration-start
+        targetType: llm
+      id: 1772081932104start-source-1772082050649-target
+      selected: false
+      source: 1772081932104start
+      sourceHandle: source
+      target: '1772082050649'
+      targetHandle: target
+      type: custom
+      zIndex: 1002
+    - data:
+        isInIteration: true
+        isInLoop: false
+        iteration_id: '1772081932104'
+        sourceType: llm
+        targetType: parameter-extractor
+      id: 1772082050649-source-1772082213694-target
+      selected: false
+      source: '1772082050649'
+      sourceHandle: source
+      target: '1772082213694'
+      targetHandle: target
+      type: custom
+      zIndex: 1002
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: iteration
+        targetType: code
+      id: 1772081932104-source-1772083582960-target
+      selected: false
+      source: '1772081932104'
+      sourceHandle: source
+      target: '1772083582960'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: true
+        isInLoop: false
+        iteration_id: '1772081932104'
+        sourceType: parameter-extractor
+        targetType: code
+      id: 1772082213694-source-1772084059297-target
+      selected: false
+      source: '1772082213694'
+      sourceHandle: source
+      target: '1772084059297'
+      targetHandle: target
+      type: custom
+      zIndex: 1002
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: if-else
+      id: 1772083582960-source-1772084377768-target
+      selected: false
+      source: '1772083582960'
+      sourceHandle: source
+      target: '1772084377768'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: llm
+      id: 1772084377768-true-1772084845235-target
+      selected: false
+      source: '1772084377768'
+      sourceHandle: 'true'
+      target: '1772084845235'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: if-else
+        targetType: llm
+      id: 1772084377768-false-17720919693490-target
+      selected: false
+      source: '1772084377768'
+      sourceHandle: 'false'
+      target: '17720919693490'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: 1772072180986-source-1772092143216-target
+      selected: false
+      source: '1772072180986'
+      sourceHandle: source
+      target: '1772092143216'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: llm
+        targetType: llm
+      id: 17720859822470-source-1772092143216-target
+      selected: false
+      source: '17720859822470'
+      sourceHandle: source
+      target: '1772092143216'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: start
+        targetType: tool
+      id: 1771997136096-source-1772094370320-target
+      selected: false
+      source: '1771997136096'
+      sourceHandle: source
+      target: '1772094370320'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: tool
+        targetType: code
+      id: 1772094370320-source-1772079457532-target
+      selected: false
+      source: '1772094370320'
+      sourceHandle: source
+      target: '1772079457532'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: code
+        targetType: llm
+      id: 1772079457532-source-17720859822470-target
+      selected: false
+      source: '1772079457532'
+      sourceHandle: source
+      target: '17720859822470'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: code
+      id: 1772077747357-source-1772106186007-target
+      selected: false
+      source: '1772077747357'
+      sourceHandle: source
+      target: '1772106186007'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: code
+        targetType: llm
+      id: 1772106186007-source-17720919693490-target
+      selected: false
+      source: '1772106186007'
+      sourceHandle: source
+      target: '17720919693490'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: start
+        targetType: llm
+      id: 1771997136096-source-1772092143216-target
+      selected: false
+      source: '1771997136096'
+      sourceHandle: source
+      target: '1772092143216'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: code
+      id: 1772084845235-source-1772160692182-target
+      source: '1772084845235'
+      sourceHandle: source
+      target: '1772160692182'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: llm
+      id: 1772160692182-source-1772092143216-target
+      source: '1772160692182'
+      sourceHandle: source
+      target: '1772092143216'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: llm
+        targetType: code
+      id: 17720919693490-source-1772160692182-target
+      source: '17720919693490'
+      sourceHandle: source
+      target: '1772160692182'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    nodes:
+    - data:
+        selected: false
+        title: User Input
+        type: start
+        variables:
+        - default: ''
+          hint: ''
+          label: topic
+          max_length: null
+          options: []
+          placeholder: ''
+          required: true
+          type: text-input
+          variable: topic
+        - default: Shallow
+          hint: ''
+          label: depth
+          options:
+          - Shallow
+          - Deep
+          placeholder: ''
+          required: true
+          type: select
+          variable: depth
+      height: 134
+      id: '1771997136096'
+      position:
+        x: -173.26249617099194
+        y: -64.17129487814518
+      positionAbsolute:
+        x: -173.26249617099194
+        y: -64.17129487814518
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        dataset_ids:
+        - KxIqzTl0dR8w6SOyXG9rUWI4KXHCJQpqmZWP8RomV54rwAlHAfJaz1ks/II+oN3D
+        multiple_retrieval_config:
+          reranking_enable: false
+          reranking_mode: weighted_score
+          score_threshold: 0.8
+          top_k: 4
+          weights:
+            keyword_setting:
+              keyword_weight: 0.3
+            vector_setting:
+              embedding_model_name: text-embedding-3-large
+              embedding_provider_name: langgenius/openai/openai
+              vector_weight: 0.7
+            weight_type: customized
+        query_attachment_selector: []
+        query_variable_selector:
+        - '1772073043326'
+        - text
+        retrieval_mode: multiple
+        selected: false
+        title: Knowledge Retrieval
+        type: knowledge-retrieval
+      height: 89
+      id: '1772070474817'
+      position:
+        x: 1048.8409784015025
+        y: -100.78459018393217
+      positionAbsolute:
+        x: 1048.8409784015025
+        y: -100.78459018393217
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        context:
+          enabled: true
+          variable_selector:
+          - '1772070474817'
+          - result
+        default_value:
+        - key: text
+          type: string
+          value: Process failed
+        error_strategy: default-value
+        model:
+          completion_params: {}
+          mode: chat
+          name: glm-4.7
+          provider: langgenius/tongyi/tongyi
+        prompt_template:
+        - id: 390e433c-813c-472b-8530-002c54902ce8
+          role: system
+          text: "# Role\n你是一位资深的内容分析师和知识管理专家。擅长将新信息与既有知识体系融合，产出结构化的深度笔记。\n\n# Context\n\
+            用户输入了一篇新的文章内容：\n{{#1771997136096.topic#}}}\n\n系统从用户的个人知识库中检索到了以下相关历史笔记：\n\
+            {{#context#}}\n\n\n# Task\n请执行以下步骤：\n1. **核心提炼**：用简练的语言总结新文章的 3 个核心观点。\n\
+            2. **知识关联**：对比新文章与“历史笔记”。\n   - 如果有冲突，指出冲突点并分析原因。\n   - 如果有互补，说明如何结合两者形成更完整的认知。\n\
+            \   - 如果没有关联，则说明这是一块全新的知识领域。\n3. **行动建议**：基于上述分析，给出 3 条可立即执行的建议。\n4. **标签生成**：为这篇文章生成\
+            \ 3-5 个标签，方便归档。\n\n# Output Format\n请严格按照以下 Markdown 格式输出：\n\n## \U0001F4DD\
+            \ 核心摘要\n- [观点1]\n- [观点2]\n- [观点3]\n\n## \U0001F517 知识关联分析\n> [在此处描述新旧知识的联系/冲突/互补]\n\
+            \n## \U0001F680 行动建议\n1. [建议1]\n2. [建议2]\n3. [建议3]\n\n## \U0001F3F7️ 推荐标签\n\
+            #标签1 #标签2 #标签3"
+        retry_config:
+          max_retries: 3
+          retry_enabled: true
+          retry_interval: 1000
+        selected: false
+        title: LLM
+        type: llm
+        vision:
+          enabled: false
+      height: 153
+      id: '1772072180986'
+      position:
+        x: 1679.8026449423303
+        y: 69.58330134824183
+      positionAbsolute:
+        x: 1679.8026449423303
+        y: 69.58330134824183
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        default_value:
+        - key: text
+          type: string
+          value: None
+        desc: extract keywords for knowledge retrieval
+        error_strategy: default-value
+        model:
+          completion_params: {}
+          mode: chat
+          name: glm-4.7
+          provider: langgenius/tongyi/tongyi
+        prompt_template:
+        - id: 5d9975d4-2219-493f-b744-241e34efd103
+          role: system
+          text: "# Role\n你是一个专业的搜索引擎优化专家和信息检索助手。\n\n# Task\n阅读用户提供的文章内容，提取出 3-5 个最核心的“搜索关键词”或“关键短语”。\n\
+            \n# Constraints\n1. **只输出关键词**：不要输出任何解释、前言或后缀。\n2. **格式要求**：关键词之间用英文逗号\
+            \ `,` 分隔。例如：人工智能, 大模型应用, 知识管理。\n3. **内容聚焦**：\n   - 忽略通用的虚词（如“发展”、“趋势”、“分析”）。\n\
+            \   - 聚焦于具体的实体、技术名词、核心概念或独特观点。\n   - 如果文章涉及特定人物或事件，务必包含。\n4. **语言一致**：关键词的语言应与文章主要语言保持一致。\n\
+            \n# Input Text\n{{#1771997136096.topic#}}\n\n# Output Example\n量子计算, 加密算法突破,\
+            \ 后量子时代"
+        reasoning_format: tagged
+        retry_config:
+          max_retries: 3
+          retry_enabled: true
+          retry_interval: 1000
+        selected: false
+        structured_output_enabled: false
+        title: keyword extractor
+        type: llm
+        vision:
+          enabled: false
+      height: 197
+      id: '1772073043326'
+      position:
+        x: 642.0465346910612
+        y: -194.90445446722163
+      positionAbsolute:
+        x: 642.0465346910612
+        y: -194.90445446722163
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data: []
+          type: none
+        headers: ''
+        method: get
+        params: ''
+        retry_config:
+          max_retries: 3
+          retry_enabled: true
+          retry_interval: 100
+        selected: false
+        ssl_verify: true
+        timeout:
+          max_connect_timeout: 0
+          max_read_timeout: 0
+          max_write_timeout: 0
+        title: HTTP Request
+        type: http-request
+        url: https://news.google.com/rss/search?q={{#1771997136096.topic#}}&hl=en-US&gl=US
+        variables: []
+      height: 172
+      id: '1772077046036'
+      position:
+        x: 128.72542329140356
+        y: 174.55945770644655
+      positionAbsolute:
+        x: 128.72542329140356
+        y: 174.55945770644655
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import xml.etree.ElementTree as ET\nimport json\n\ndef main(rss_text):\n\
+          \    # 直接使用传入的 rss_text，不再调用 .get()\n    try:\n        root = ET.fromstring(rss_text)\n\
+          \        news_items = []\n        for item in root.findall(\".//item\"):\n\
+          \            news = {\n                \"title\": item.find(\"title\").text\
+          \ if item.find(\"title\") is not None else \"\",\n                # \"link\"\
+          : item.find(\"link\").text if item.find(\"link\") is not None else \"\"\
+          ,\n                # \"pubDate\": item.find(\"pubDate\").text if item.find(\"\
+          pubDate\") is not None else \"\",\n                # \"description\": item.find(\"\
+          description\").text if item.find(\"description\") is not None else \"\"\
+          ,\n                # \"source\": item.find(\"source\").text if item.find(\"\
+          source\") is not None else \"\",\n                # \"source_url\": item.find(\"\
+          source\").attrib.get(\"url\", \"\") if item.find(\"source\") is not None\
+          \ else \"\"\n            }\n            news_items.append(news)\n      \
+          \  # 返回字典，Dify 会自动序列化为 JSON\n        return {\"result\": news_items[:2]}\n\
+          \    except Exception as e:\n        return {\"error\": str(e)}\n"
+        code_language: python3
+        outputs:
+          result:
+            children: null
+            type: array[object]
+        selected: false
+        title: rss2json
+        type: code
+        variables:
+        - value_selector:
+          - '1772077046036'
+          - body
+          value_type: string
+          variable: rss_text
+      height: 51
+      id: '1772077747357'
+      position:
+        x: 411.1331280901551
+        y: 238.91321405530442
+      positionAbsolute:
+        x: 411.1331280901551
+        y: 238.91321405530442
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        is_team_authorization: true
+        paramSchemas:
+        - auto_generate: null
+          default: null
+          form: llm
+          human_description:
+            en_US: used for searching
+            ja_JP: used for searching
+            pt_BR: used for searching
+            zh_Hans: 用于搜索网页内容
+          label:
+            en_US: Query string
+            ja_JP: Query string
+            pt_BR: Query string
+            zh_Hans: 查询语句
+          llm_description: key words for searching
+          max: null
+          min: null
+          name: query
+          options: []
+          placeholder: null
+          precision: null
+          required: true
+          scope: null
+          template: null
+          type: string
+        - auto_generate: null
+          default: null
+          form: llm
+          human_description:
+            en_US: Parameter defines the language to use for the Google search. It's
+              a two-letter language code. (e.g., en for English, es for Spanish, or
+              fr for French). Head to https://serpapi.com/google-languages for a full
+              list of supported Google languages.
+            ja_JP: Parameter defines the language to use for the Google search. It's
+              a two-letter language code. (e.g., en for English, es for Spanish, or
+              fr for French). Head to https://serpapi.com/google-languages for a full
+              list of supported Google languages.
+            pt_BR: Parameter defines the language to use for the Google search. It's
+              a two-letter language code. (e.g., en for English, es for Spanish, or
+              fr for French). Head to https://serpapi.com/google-languages for a full
+              list of supported Google languages.
+            zh_Hans: 此参数定义用于 Google 搜索的语言。它是一个两字母的语言代码。 (例如，en 代表英语，es 代表西班牙语，fr 代表法语)。请前往
+              https://serpapi.com/google-languages 查看完整的支持 Google 语言列表。
+          label:
+            en_US: Language
+            ja_JP: Language
+            pt_BR: Language
+            zh_Hans: 语言
+          llm_description: Language
+          max: null
+          min: null
+          name: hl
+          options: []
+          placeholder: null
+          precision: null
+          required: false
+          scope: null
+          template: null
+          type: string
+        - auto_generate: null
+          default: null
+          form: llm
+          human_description:
+            en_US: Parameter defines the country to use for the Google search. It's
+              a two-letter country code. (e.g., us for the United States, uk for United
+              Kingdom, or fr for France). Head to the https://serpapi.com/google-countries
+              for a full list of supported Google countries.
+            ja_JP: Parameter defines the country to use for the Google search. It's
+              a two-letter country code. (e.g., us for the United States, uk for United
+              Kingdom, or fr for France). Head to the https://serpapi.com/google-countries
+              for a full list of supported Google countries.
+            pt_BR: Parameter defines the country to use for the Google search. It's
+              a two-letter country code. (e.g., us for the United States, uk for United
+              Kingdom, or fr for France). Head to the https://serpapi.com/google-countries
+              for a full list of supported Google countries.
+            zh_Hans: 此参数定义用于 Google 搜索的国家。它是一个两字母的国家代码。 (例如，us 代表美国，uk 代表英国，fr 代表法国)。请前往
+              https://serpapi.com/google-countries 查看完整的支持 Google 国家列表。
+          label:
+            en_US: Country
+            ja_JP: Country
+            pt_BR: Country
+            zh_Hans: 国家
+          llm_description: Country
+          max: null
+          min: null
+          name: gl
+          options: []
+          placeholder: null
+          precision: null
+          required: false
+          scope: null
+          template: null
+          type: string
+        - auto_generate: null
+          default: null
+          form: llm
+          human_description:
+            en_US: Parameter defines from where you want the search to originate.
+              If several locations match the location requested, we'll pick the most
+              popular one. Head to the /locations.json API if you need more precise
+              control. The location and uule parameters can't be used together. It
+              is recommended to specify location at the city level in order to simulate
+              a real user’s search. If location is omitted, the search may take on
+              the location of the proxy.
+            ja_JP: Parameter defines from where you want the search to originate.
+              If several locations match the location requested, we'll pick the most
+              popular one. Head to the /locations.json API if you need more precise
+              control. The location and uule parameters can't be used together. It
+              is recommended to specify location at the city level in order to simulate
+              a real user’s search. If location is omitted, the search may take on
+              the location of the proxy.
+            pt_BR: Parameter defines from where you want the search to originate.
+              If several locations match the location requested, we'll pick the most
+              popular one. Head to the /locations.json API if you need more precise
+              control. The location and uule parameters can't be used together. It
+              is recommended to specify location at the city level in order to simulate
+              a real user’s search. If location is omitted, the search may take on
+              the location of the proxy.
+            zh_Hans: 此参数定义搜索的位置。如果有多个位置与请求的位置匹配，我们将选择最受欢迎的一个。如果需要更精确的控制，请前往 /locations.json
+              API。location 和 uule 参数不能同时使用。建议在城市级别指定位置，以模拟真实用户的搜索。如果省略位置，则搜索可能会采用代理的位置。
+          label:
+            en_US: Location
+            ja_JP: Location
+            pt_BR: Location
+            zh_Hans: 位置
+          llm_description: Location
+          max: null
+          min: null
+          name: location
+          options: []
+          placeholder: null
+          precision: null
+          required: false
+          scope: null
+          template: null
+          type: string
+        params:
+          gl: ''
+          hl: ''
+          location: ''
+          query: ''
+        plugin_id: langgenius/google
+        plugin_unique_identifier: langgenius/google:0.0.9@d360bbc433f39be1b11909cb9c32e6be4a17ea06af083f9e1c7613bb802bf517
+        provider_icon: https://cloud.dify.ai/console/api/workspaces/current/plugin/icon?tenant_id=7ad12d42-295f-4049-97cd-f8f2dd04fb64&filename=1c5871163478957bac64c3fe33d72d003f767497d921c74b742aad27a8344a74.svg
+        provider_id: langgenius/google/google
+        provider_name: langgenius/google/google
+        provider_type: builtin
+        selected: false
+        title: GoogleSearch
+        tool_configurations: {}
+        tool_description: A tool for performing a Google SERP search and extracting
+          snippets and webpages.Input should be a search query.
+        tool_label: GoogleSearch
+        tool_name: google_search
+        tool_node_version: '2'
+        tool_parameters:
+          gl:
+            type: mixed
+            value: null
+          hl:
+            type: mixed
+            value: null
+          location:
+            type: mixed
+            value: null
+          query:
+            type: mixed
+            value: '{{#1771997136096.topic#}}'
+        type: tool
+      height: 51
+      id: '1772094370320'
+      position:
+        x: -6.671804683052073
+        y: 537.4786020611268
+      positionAbsolute:
+        x: -6.671804683052073
+        y: 537.4786020611268
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import json\ndef main(api_response: dict) -> dict:\n    results = api_response[0][\"\
+          organic_results\"]\n    \n    cleaned_data = []\n    \n    # 2. 遍历每一条结果\n\
+          \    for item in results:\n        # 提取需要的字段，如果字段缺失则设为空字符串\n        cleaned_item\
+          \ = {\n            \"title\": item.get(\"title\", \"\"),\n            \"\
+          snippet\": item.get(\"snippet\", \"\")\n        }\n        cleaned_data.append(cleaned_item)\n\
+          \    result_string = json.dumps({\"news\":cleaned_data[:2]}, ensure_ascii=False,\
+          \ indent=2)\n    # 3. 返回结果\n    return {\n        \"result\": result_string\n\
+          \    }"
+        code_language: python3
+        outputs:
+          result:
+            children: null
+            type: string
+        selected: false
+        title: Extractor
+        type: code
+        variables:
+        - value_selector:
+          - '1772094370320'
+          - json
+          value_type: array[object]
+          variable: api_response
+      height: 51
+      id: '1772079457532'
+      position:
+        x: 355.2559188381978
+        y: 601.7582157002084
+      positionAbsolute:
+        x: 355.2559188381978
+        y: 601.7582157002084
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        error_handle_mode: remove-abnormal-output
+        flatten_output: true
+        height: 178
+        is_parallel: false
+        iterator_input_type: array[object]
+        iterator_selector:
+        - '1772077747357'
+        - result
+        output_selector:
+        - '1772084059297'
+        - result
+        output_type: array[string]
+        parallel_nums: 10
+        selected: false
+        start_node_id: 1772081932104start
+        title: Iteration
+        type: iteration
+        width: 844
+      height: 178
+      id: '1772081932104'
+      position:
+        x: 634.2948339317184
+        y: 322.69114810536655
+      positionAbsolute:
+        x: 634.2948339317184
+        y: 322.69114810536655
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 844
+      zIndex: 1
+    - data:
+        desc: ''
+        isInIteration: true
+        selected: false
+        title: ''
+        type: iteration-start
+      draggable: false
+      height: 48
+      id: 1772081932104start
+      parentId: '1772081932104'
+      position:
+        x: 24
+        y: 68
+      positionAbsolute:
+        x: 658.2948339317184
+        y: 390.69114810536655
+      selectable: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom-iteration-start
+      width: 44
+      zIndex: 1002
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        isInIteration: true
+        isInLoop: false
+        iteration_id: '1772081932104'
+        model:
+          completion_params: {}
+          mode: chat
+          name: glm-4.7
+          provider: langgenius/tongyi/tongyi
+        prompt_template:
+        - id: 1e1cbcb7-b12c-47b1-b210-a8f9b545379b
+          role: system
+          text: '你是一个专业的新闻分析师。你的任务是分析给定的新闻片段。
+
+            请严格遵从以下输出格式，不要输出任何多余的解释文字，只输出合法的 JSON 对象：
+
+            {
+
+            "sentiment": "positive" | "negative" | "neutral",
+
+            "score": 0.0 到 1.0 之间的浮点数 (1.0为极度正面，0.0为极度负面),
+
+            "keywords": ["关键词1", "关键词2", "关键词3"],
+
+            "summary": "一句话总结该新闻的核心技术点"
+
+            }'
+        - id: 31367dc5-d757-4259-93ed-8949e42a82a1
+          role: user
+          text: '新闻元数据：{{#1772081932104.item#}}
+
+
+            请开始分析并输出 JSON：'
+        selected: false
+        title: Analyze_Single_News
+        type: llm
+        vision:
+          enabled: false
+      height: 87
+      id: '1772082050649'
+      parentId: '1772081932104'
+      position:
+        x: 86.97817447092893
+        y: 65
+      positionAbsolute:
+        x: 721.2730084026473
+        y: 387.69114810536655
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+      zIndex: 1002
+    - data:
+        instruction: ''
+        isInIteration: true
+        isInLoop: false
+        iteration_id: '1772081932104'
+        model:
+          completion_params:
+            temperature: 0
+          mode: chat
+          name: qwen-flash
+          provider: langgenius/tongyi/tongyi
+        parameters:
+        - description: 情感倾向
+          name: sentiment
+          required: false
+          type: string
+        - description: 情感分数
+          name: score
+          required: false
+          type: number
+        - description: 关键词
+          name: keywords
+          required: false
+          type: array[string]
+        - description: summary
+          name: summary
+          required: false
+          type: string
+        query:
+        - '1772082050649'
+        - text
+        reasoning_mode: prompt
+        selected: false
+        title: Parameter Extractor
+        type: parameter-extractor
+        vision:
+          enabled: false
+      height: 87
+      id: '1772082213694'
+      parentId: '1772081932104'
+      position:
+        x: 339.6805930721771
+        y: 65.7599016292964
+      positionAbsolute:
+        x: 973.9754270038954
+        y: 388.45104973466294
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+      zIndex: 1002
+    - data:
+        code: "def main(news_data: list) -> dict:\n    \"\"\"\n    统计负面新闻比例，判断是否高风险。\n\
+          \    假设数据结构: [{\"sentiment\": \"negative\", ...}, {\"sentiment\": \"positive\"\
+          , ...}]\n    \"\"\"\n    if not news_data:\n        return {\"is_risky\"\
+          : False, \"risk_ratio\": 0.0, \"total_count\": 0}\n    \n    total_count\
+          \ = len(news_data)\n    negative_count = 0\n    \n    for item in news_data:\n\
+          \        # 获取情感字段，转为小写防止大小写不一致\n        sentiment = str(item.get(\"sentiment\"\
+          , \"\")).lower()\n        \n        # 判定逻辑：如果是 \"negative\" 则计数\n      \
+          \  # 你也可以扩展逻辑：如果 score < 0.3 也算负面\n        if sentiment == \"negative\"\
+          :\n            negative_count += 1\n    \n    # 计算比例\n    risk_ratio = negative_count\
+          \ / total_count\n    \n    # 设定阈值：如果负面占比超过 50% (0.5)，标记为高风险\n    threshold\
+          \ = 0.5\n    is_risky = risk_ratio > threshold\n    \n    return {\"is_risky\"\
+          : is_risky,      # 布尔值，用于分支判断\n        \"risk_ratio\": risk_ratio,  # 浮点数，可用于报告展示\
+          \ (如 \"负面率 60%\")\n        \"total_count\": total_count,} # 整数，新闻总数\n  \
+          \  #     \"negative_count\": negative_count # 整数，负面新闻数\n"
+        code_language: python3
+        outputs:
+          is_risky:
+            children: null
+            type: boolean
+          risk_ratio:
+            children: null
+            type: number
+          total_count:
+            children: null
+            type: number
+        selected: false
+        title: risk calculator
+        type: code
+        variables:
+        - value_selector:
+          - '1772081932104'
+          - output
+          value_type: array[string]
+          variable: news_data
+      height: 51
+      id: '1772083582960'
+      position:
+        x: 1500.612519706283
+        y: 287.9721600396676
+      positionAbsolute:
+        x: 1500.612519706283
+        y: 287.9721600396676
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "def main(sentiment,score,keywords,summary):\n    result_dict = {\n\
+          \        \"sentiment\": sentiment,\n        \"score\": score,\n        \"\
+          keywords\": keywords,\n        \"summary\": summary\n    }\n    return {\"\
+          result\":result_dict}"
+        code_language: python3
+        isInIteration: true
+        isInLoop: false
+        iteration_id: '1772081932104'
+        outputs:
+          result:
+            children: null
+            type: object
+        selected: false
+        title: var agg
+        type: code
+        variables:
+        - value_selector:
+          - '1772082213694'
+          - sentiment
+          value_type: string
+          variable: sentiment
+        - value_selector:
+          - '1772082213694'
+          - score
+          value_type: number
+          variable: score
+        - value_selector:
+          - '1772082213694'
+          - keywords
+          value_type: array[string]
+          variable: keywords
+        - value_selector:
+          - '1772082213694'
+          - summary
+          value_type: string
+          variable: summary
+      height: 51
+      id: '1772084059297'
+      parentId: '1772081932104'
+      position:
+        x: 582
+        y: 74.35374894047555
+      positionAbsolute:
+        x: 1216.2948339317184
+        y: 397.0448970458421
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+      zIndex: 1002
+    - data:
+        cases:
+        - case_id: 'true'
+          conditions:
+          - comparison_operator: is
+            id: 461d3842-0c5d-40b6-9f94-ce0c9030a955
+            value: true
+            varType: boolean
+            variable_selector:
+            - '1772083582960'
+            - is_risky
+          id: 'true'
+          logical_operator: and
+        selected: false
+        title: IF/ELSE
+        type: if-else
+      height: 123
+      id: '1772084377768'
+      position:
+        x: 1554.327047760162
+        y: 405.89234961462796
+      positionAbsolute:
+        x: 1554.327047760162
+        y: 405.89234961462796
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        model:
+          completion_params: {}
+          mode: chat
+          name: glm-4.7
+          provider: langgenius/tongyi/tongyi
+        prompt_template:
+        - id: 01e9841b-ef59-4cba-a50c-80f5513fe9de
+          role: system
+          text: '【警告：检测到高风险舆情】
+
+            负面新闻占比：{{#1772083582960.risk_ratio#}}
+
+
+            请作为合规官，分析以下新闻数据，生成一段简短的【风险提示摘要】：
+
+            {{#1772081932104.output#}}
+
+
+            要求：
+
+            1. 指出主要风险点。
+
+            2. 明确标记该报告状态为 "需人工复核"。
+
+            3. 语气严肃、专业。
+
+            4. 只输出提示摘要内容，不要写整篇研报。'
+        selected: false
+        title: risk statement
+        type: llm
+        vision:
+          enabled: false
+      height: 87
+      id: '1772084845235'
+      position:
+        x: 1939.5983972145868
+        y: 313.7234133026587
+      positionAbsolute:
+        x: 1939.5983972145868
+        y: 313.7234133026587
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        default_value:
+        - key: text
+          type: string
+          value: None
+        error_strategy: default-value
+        model:
+          completion_params: {}
+          mode: chat
+          name: glm-4.7
+          provider: langgenius/tongyi/tongyi
+        prompt_template:
+        - id: 01e9841b-ef59-4cba-a50c-80f5513fe9de
+          role: system
+          text: '你是一名专业的内容总结助手。
+
+            请根据用户提供的上下文内容，进行精炼、准确、客观的总结。
+
+            只总结上下文里真实存在的信息，不编造、不扩展、不联想。
+
+            保留核心观点、关键数据、重要结论。
+
+            语言简洁通顺，逻辑清晰，不使用冗余表达。
+
+            如果上下文无有效信息，直接说明 “无有效内容可总结”。
+
+            请基于以上规则，对下面的内容进行总结：
+
+            '
+        retry_config:
+          max_retries: 3
+          retry_enabled: true
+          retry_interval: 1000
+        selected: false
+        title: arxiv summarizer
+        type: llm
+        vision:
+          enabled: false
+      height: 153
+      id: '17720859822470'
+      position:
+        x: 856.7287129867002
+        y: 662.2824537686463
+      positionAbsolute:
+        x: 856.7287129867002
+        y: 662.2824537686463
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        context:
+          enabled: true
+          variable_selector:
+          - '1772106186007'
+          - result
+        model:
+          completion_params: {}
+          mode: chat
+          name: glm-4.7
+          provider: langgenius/tongyi/tongyi
+        prompt_template:
+        - id: 01e9841b-ef59-4cba-a50c-80f5513fe9de
+          role: system
+          text: '你是一名专业的内容总结助手。
+
+            请根据用户提供的上下文内容，进行精炼、准确、客观的总结。
+
+            只总结上下文里真实存在的信息，不编造、不扩展、不联想。
+
+            保留核心观点、关键数据、重要结论。
+
+            语言简洁通顺，逻辑清晰，不使用冗余表达。
+
+            如果上下文无有效信息，直接说明 “无有效内容可总结”。
+
+            请基于以上规则，对下面的内容进行总结：
+
+            {{#context#}}'
+        selected: false
+        title: news summarizer
+        type: llm
+        vision:
+          enabled: false
+      height: 87
+      id: '17720919693490'
+      position:
+        x: 1911.187805437233
+        y: 579.0072571042402
+      positionAbsolute:
+        x: 1911.187805437233
+        y: 579.0072571042402
+      selected: true
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        model:
+          completion_params:
+            temperature: 0.7
+          mode: chat
+          name: qwen3.5-plus
+          provider: langgenius/tongyi/tongyi
+        prompt_config:
+          jinja2_variables: []
+        prompt_template:
+        - edition_type: basic
+          id: beb9726b-e095-43dc-aeda-7f2c44e8c267
+          jinja2_text: ''
+          role: system
+          text: '# 角色
+
+            你是一位资深科技行业分析师。请根据提供的信息撰写一份深度研报。
+
+
+            {{#1772160692182.final_prompt_str#}}
+
+
+            # 2. 背景数据
+
+            - 内部知识库参考: {{#1772072180986.text#}}
+
+            -外部公开相关科研信息参考：
+
+            {{#17720859822470.text#}}
+
+
+            # 3. 报告要求
+
+            请综合以上信息，撰写报告，包含以下章节：
+
+            1. **执行摘要**: 200字以内的核心观点。
+
+            2. **市场情绪分析**: 基于外部舆情数据，描述当前市场对该技术的态度。
+
+            3. **技术趋势洞察**: 结合内部知识库，分析关键技术突破。
+
+            4. **结论与建议**: 给投资者的具体建议。
+
+
+            # 格式
+
+            - 使用 Markdown 格式。
+
+            - 关键数据加粗。
+
+            - 如果存在风险，建议部分必须包含风控措施。'
+        selected: false
+        title: Final LLM
+        type: llm
+        vision:
+          enabled: false
+      height: 87
+      id: '1772092143216'
+      position:
+        x: 2632.9565282791345
+        y: 435.7765817223683
+      positionAbsolute:
+        x: 2632.9565282791345
+        y: 435.7765817223683
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "import json\ndef main(res):\n    result_string = json.dumps({\"news\"\
+          :res}, ensure_ascii=False, indent=2)\n    # 3. 返回结果\n    return {\n    \
+          \    \"result\": result_string\n    }\n"
+        code_language: python3
+        outputs:
+          result:
+            children: null
+            type: string
+        selected: false
+        title: Code 5
+        type: code
+        variables:
+        - value_selector:
+          - '1772077747357'
+          - result
+          value_type: array[object]
+          variable: res
+      height: 51
+      id: '1772106186007'
+      position:
+        x: 1432.7854030584103
+        y: 730.1707686031461
+      positionAbsolute:
+        x: 1432.7854030584103
+        y: 730.1707686031461
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    - data:
+        code: "\ndef main(is_risky: True, risk_st: None, news_sum:None,total_count,risk_ratio):\n\
+          \    if is_risky:\n        final_prompt_str = (\n        \"1. 风险与合规状态\\\
+          n\"\n        f\"{risk_st}\"\n    )\n    else:\n        final_prompt_str\
+          \ = (\n        \"1. 外部舆情分析数据\\n\"\n        f\"(共分析 **{total_count}** 条新闻，负面率\
+          \ **{risk_ratio}**)\\n\"\n        f\"{news_sum}\"\n    )\n    return {\n\
+          \        \"final_prompt_str\": final_prompt_str,\n    }\n"
+        code_language: python3
+        outputs:
+          final_prompt_str:
+            children: null
+            type: string
+        selected: false
+        title: aggregator
+        type: code
+        variables:
+        - value_selector:
+          - '1772083582960'
+          - is_risky
+          value_type: boolean
+          variable: is_risky
+        - value_selector:
+          - '1772084845235'
+          - text
+          value_type: string
+          variable: risk_st
+        - value_selector:
+          - '17720919693490'
+          - text
+          value_type: string
+          variable: news_sum
+        - value_selector:
+          - '1772083582960'
+          - total_count
+          value_type: number
+          variable: total_count
+        - value_selector:
+          - '1772083582960'
+          - risk_ratio
+          value_type: number
+          variable: risk_ratio
+      height: 51
+      id: '1772160692182'
+      position:
+        x: 2282.6060132854223
+        y: 559.2146384426471
+      positionAbsolute:
+        x: 2282.6060132854223
+        y: 559.2146384426471
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 242
+    viewport:
+      x: -29.205238663450245
+      y: 261.10590961497576
+      zoom: 0.5433674312630327
+  rag_pipeline_variables: []

@@ -1,0 +1,108 @@
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ----- Python -----
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+ENV/
+.venv/
+build/
+dist/
+eggs/
+*.egg-info/
+pip-wheel-metadata/
+wheelhouse/
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+.mypy_cache/
+.pytype/
+.coverage
+.coverage.*
+coverage.xml
+nosetests.xml
+pip-log.txt
+local_settings.py
+instance/
+*.env
+!*.env.example
+
+# Byte-compiled / optimized / DLL files
+*.pyc
+*.pyo
+*.pyd
+
+# PyInstaller
+*.manifest
+*.spec
+
+# ----- IDEs / Editors -----
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# ----- OS files -----
+._*
+.Spotlight-V100
+.Trash-?
+
+# ----- Flutter / Dart -----
+.dart_tool/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
+/.flutter-plugins
+/.flutter-plugins-dependencies
+
+# Generated plugin registrant
+generated_plugin_registrant.dart
+
+# Flutter iOS
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Pods/
+ios/Runner.xcworkspace/
+ios/Runner.xcworkspace/contents.xcworkspacedata
+ios/Flutter/Generated.xcconfig
+ios/ServiceDefinitions.json
+ios/Flutter/engine/
+Podfile.lock
+Pods/
+DerivedData/
+
+# Flutter Android
+android/.gradle/
+android/app/build/
+android/.cxx/
+.gradle/
+local.properties
+
+# Android Studio
+*.iml
+
+# Misc
+*.log
+logs/
+
+# Keystores
+*.jks
+*.keystore
+
+# Flutter pub cache (optional)
+/.pub-cache/
+
+# Ignore generated files in service subfolders
+*/build/
+*/.dart_tool/
+*/pubspec.lock
+*/models
