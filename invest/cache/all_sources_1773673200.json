@@ -1,0 +1,37 @@
+[
+  {
+    "type": "announcement",
+    "content": "XX科技发布2025年年报，营收增长50%",
+    "stock_code": "600001"
+  },
+  {
+    "type": "announcement",
+    "content": "XX半导体拟减持5%股份",
+    "stock_code": "000001"
+  },
+  {
+    "type": "market",
+    "content": "北向资金今日净流入200亿",
+    "stocks": [
+      "600519",
+      "600001"
+    ]
+  },
+  {
+    "type": "market",
+    "content": "算力板块今日涨幅5%",
+    "stocks": [
+      "600001"
+    ]
+  },
+  {
+    "type": "research",
+    "content": "券商研报：算力需求将持续增长，推荐XX科技",
+    "stock_code": "600001"
+  },
+  {
+    "type": "research",
+    "content": "电话会议纪要：XX半导体Q1订单超预期",
+    "stock_code": "000001"
+  }
+]
