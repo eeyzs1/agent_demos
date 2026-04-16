@@ -20,4 +20,4 @@ Enables: learning from past generations, avoiding repeated mistakes, measuring i
 
 ## Generations
 
-(No generations yet. Run `./scripts/bootstrap.sh "your task"` to start.)
+(No generations yet. Open this project in an AI IDE and give a task to start.)

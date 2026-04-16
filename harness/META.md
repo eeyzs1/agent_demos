@@ -15,7 +15,9 @@ Execution Results → [Evolution] → Improved Harness + Agents + Evolution Rule
 
 ## Architecture
 ```
-META.md                    ← You are here. The bootstrap DNA.
+META.md                    ← You are here. Full pipeline specification.
+AGENTS.md                  ← Auto-loaded by Trae as project rules
+CLAUDE.md                  ← Auto-loaded by Claude Code as project rules
 meta/
   interpreter.md           ← Intent → Structured Task Definition
   harness-generator.md     ← Task Definition → Harness
@@ -28,21 +30,21 @@ evolution/                 ← Self-evolution system
 templates/                 ← Reusable building blocks
 generated/                 ← Output: generated harness+agent configurations
 memory/                    ← Meta-level memory (compounds over time)
-scripts/
-  bootstrap.sh            ← Entry point: intent in, execution out
+scripts/                   ← Utility scripts (not entry points)
 ```
 
 ## How to Bootstrap
-1. User provides vague intent
-2. Agent reads THIS file to understand the pipeline
-3. Agent follows `meta/interpreter.md` to parse intent into structured task
-4. Agent follows `meta/harness-generator.md` to generate a harness
-5. Agent follows `meta/agent-factory.md` to create agent configurations
-6. Agent follows `meta/orchestrator.md` to plan execution
-7. Generated output goes to `generated/[project-name]/`
-8. Execution begins with generated harness+agents
-9. After execution, `evolution/framework.md` runs the evolution loop
-10. Mutations that improve fitness are adopted, logged to `evolution/log.md`
+1. User provides vague intent in their AI IDE (Trae/Claude Code/Cursor)
+2. AI IDE auto-loads project rules (AGENTS.md for Trae, CLAUDE.md for Claude Code)
+3. Rules instruct the AI to follow the pipeline below
+4. Agent follows `meta/interpreter.md` to parse intent into structured task
+5. Agent follows `meta/harness-generator.md` to generate a harness
+6. Agent follows `meta/agent-factory.md` to create agent configurations
+7. Agent follows `meta/orchestrator.md` to plan execution
+8. Generated output goes to `generated/[project-name]/`
+9. Execution begins with generated harness+agents
+10. After execution, `evolution/framework.md` runs the evolution loop
+11. Mutations that improve fitness are adopted, logged to `evolution/log.md`
 
 ## Meta-Rules (Cannot Be Overridden)
 1. No execution without interpretation

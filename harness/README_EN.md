@@ -22,7 +22,18 @@ Imagine: you have an idea but don't know how to build it. You tell this system "
 
 ### If You're Not a Developer
 
-You don't need to know code. Just open this project in an AI coding tool (like Trae, Cursor, or Claude Code) and tell it what you want.
+You don't need to know code. Just open this project in an AI coding tool and tell it what you want.
+
+**Supported tools and context loading:**
+
+| Tool | Rules File | Loading | What You Need to Do |
+|------|-----------|---------|-------------------|
+| **Trae** | `AGENTS.md` | ✅ Auto-loaded | Just open the project |
+| **Claude Code** | `CLAUDE.md` | ✅ Auto-loaded | Just open the project |
+| **Cursor** | `.cursorrules` | ⚠️ Manual | Copy `AGENTS.md` contents to `.cursorrules` |
+| **Other AI tools** | — | ⚠️ Manual | Paste `AGENTS.md` contents into the conversation as context |
+
+**Critical: The AI MUST read the rules file to follow the pipeline.** If the AI doesn't read the rules, it will skip the pipeline and start working on its own — that's not what we want.
 
 **Examples — just say:**
 
@@ -31,15 +42,19 @@ You don't need to know code. Just open this project in an AI coding tool (like T
 - "I want to automate our weekly report generation"
 - "Create a SaaS for freelance invoicing"
 
-The AI will automatically read this project's rules and then:
-- Parse your requirements
-- Generate constraints and workflows tailored to the task
-- Create specialized agents to execute
-- Verify the results meet your standards
+The AI **automatically reads the project rules** (no manual action needed), then:
+- Parses your requirements
+- Generates constraints and workflows tailored to the task
+- Creates specialized agents to execute
+- Verifies the results meet your standards
 
 **You only need to do two things:**
 1. **Say what you want** (the vaguer, the better — the system will help you clarify)
 2. **Confirm assumptions** (the system will list its assumptions; just confirm or correct them)
+
+**Why will the AI follow the rules?** Because the rule files (`AGENTS.md` / `CLAUDE.md`) are auto-loaded by the AI IDE as "project rules" — the AI reads them before every conversation. These aren't suggestions — they're the AI's operating instructions.
+
+**What if the AI doesn't read the rules?** You'll notice the AI starts coding or planning immediately instead of asking you to confirm the task definition first. In that case, manually paste the contents of `AGENTS.md` into the conversation.
 
 ### If You're a Software Engineer
 
@@ -71,11 +86,12 @@ Vague Intent → [Interpreter] → Structured Task Definition
 ```
 
 **Quick start:**
-```bash
-./scripts/bootstrap.sh "I need a customer onboarding system"
-```
 
-The AI agent will then read `META.md` and run the full pipeline. Output appears in `generated/[project-name]/`.
+1. Open this project in Trae / Claude Code
+2. Tell the AI what you want (e.g., "I need a customer onboarding system")
+3. The AI auto-reads project rules and follows the pipeline
+4. Confirm the assumptions the AI lists
+5. The AI generates harness + agent configurations and executes
 
 ---
 
@@ -84,8 +100,9 @@ The AI agent will then read `META.md` and run the full pipeline. Output appears 
 ```
 README.md           ← Chinese version
 README_EN.md        ← You are here
-META.md             ← The system's DNA (AI agent entry point)
-AGENTS.md           ← Project rules (auto-loaded by AI IDEs)
+AGENTS.md           ← ⚡ Auto-loaded project rules (Trae entry point)
+CLAUDE.md           ← ⚡ Auto-loaded project rules (Claude Code entry point)
+META.md             ← The system's DNA (full pipeline specification)
 │
 meta/               ← The four stages of the compilation pipeline
   interpreter.md      Step 1: Intent → Structured Task
@@ -115,8 +132,7 @@ memory/             ← Meta-knowledge (cross-project, compounding over time)
   decisions.md        Architecture decision records
   progress.md         Execution progress
 │
-scripts/            ← Cross-platform scripts (bash: Linux/macOS/WSL)
-  bootstrap.sh        Entry point
+scripts/            ← Verification and check scripts (bash: Linux/macOS/WSL)
   verify-spec.md      Declarative: WHAT to check
   verify.sh           Executable: HOW to check
   pre-task.sh         Pre-task validation
