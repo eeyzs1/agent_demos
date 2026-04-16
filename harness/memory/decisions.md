@@ -45,3 +45,11 @@ Agents need to understand context to make consistent decisions.
 - Alternatives: Always generate from scratch; rigid templates with no adaptation
 - Why: Templates encode accumulated knowledge. Starting from a template is faster and more reliable than starting from zero. Adaptation ensures the harness fits the specific task.
 - Consequences: Templates must be maintained. Bad templates produce bad harnesses. Template quality is a meta-concern that must be tracked.
+
+### ADR-006: Self-Evolving Architecture with Meta-Evolution
+- Date: 2026-04-14
+- Context: Passive mistake-driven feedback is insufficient — the system only improves when it fails. No mechanism for proactive optimization.
+- Decision: Add an evolution layer with three-tier genome (harness, agent, evolution rules) and A/B testing selection. The evolution genome itself can evolve (meta-evolution).
+- Alternatives: Passive mistake-driven only; manual optimization; genetic algorithm without meta-evolution
+- Why: Passive feedback is reactive. Evolution is proactive. Meta-evolution ensures the optimization process itself improves over time, preventing stagnation.
+- Consequences: More complex system. Risk of destabilizing mutations. Mitigated by safety constraints (no removing verification, no removing evolution, mutation rate cap, reversibility).

@@ -12,8 +12,9 @@ Imagine: you have an idea but don't know how to build it. You tell this system "
 4. **Orchestrates execution** — plans who goes first, who goes next, who works in parallel
 5. **Verifies results** — automatically checks if output meets the bar
 6. **Gets smarter over time** — every mistake makes the system better
+7. **Self-evolves** — actively optimizes its own rules, workflows, and agent configurations; the evolution rules themselves also evolve
 
-**In one sentence**: This is an "AI agent management system" — it ensures AI agents produce reliable work instead of going off the rails.
+**In one sentence**: This is an "evolving AI agent management system" — it ensures AI agents produce reliable work, and keeps getting more reliable.
 
 ---
 
@@ -65,6 +66,8 @@ Vague Intent → [Interpreter] → Structured Task Definition
                Agents execute within generated harness → Results
                       ↓
                Failure feedback → Meta-Harness improves
+                      ↓
+               [Evolution] → Harness + Agents + Evolution Rules self-improve
 ```
 
 **Quick start:**
@@ -79,8 +82,8 @@ The AI agent will then read `META.md` and run the full pipeline. Output appears 
 ## Project Structure
 
 ```
-README.md           ← You are here
-README_EN.md        ← English version of this file
+README.md           ← Chinese version
+README_EN.md        ← You are here
 META.md             ← The system's DNA (AI agent entry point)
 AGENTS.md           ← Project rules (auto-loaded by AI IDEs)
 │
@@ -91,6 +94,11 @@ meta/               ← The four stages of the compilation pipeline
   orchestrator.md     Step 4: Agents → Execution Plan
   examples/           Reference examples (not preset templates)
     topologies.md       Agent topology examples
+│
+evolution/          ← Self-evolution system
+  framework.md        Evolution algorithm (genome, fitness, mutation, selection)
+  genome.md           Current evolvable state (what can mutate)
+  log.md              Evolution history (fossil record)
 │
 templates/          ← Domain templates (building blocks for generation)
   web-app/            Web application
@@ -154,6 +162,28 @@ The system doesn't pick from 5 preset patterns. It **synthesizes** the optimal a
 5. Add verification layer (there must ALWAYS be an independent verifier)
 6. Define handoff points
 
+### The System Self-Evolves
+
+This is the most radical design. The system doesn't just learn from mistakes — it **actively optimizes itself**:
+
+**Three-layer genome (what can evolve):**
+- **Harness genome**: constraints, workflows, skills, verification rules
+- **Agent genome**: topology, role scope, handoff formats, context budgets
+- **Evolution genome** (meta-evolution): mutation operators, selection criteria, fitness weights, mutation rate
+
+**Evolution loop:**
+```
+Measure fitness → Propose mutation → Test mutation → Select or reject → Update genome
+                                                                    ↓
+                                                      Meta-evolution: update mutation/selection rules themselves
+```
+
+**Safety constraints (preventing "cancer" and "suicide"):**
+- Never remove the verification layer (otherwise the system accepts wrong results — "cancer")
+- Never remove the evolution system itself (otherwise the system stops evolving — "suicide")
+- Mutation rate never exceeds 30% (otherwise the system descends into chaos)
+- All mutations must be reversible (previous genome version is always preserved)
+
 ---
 
 ## Verification Mechanism
@@ -193,6 +223,9 @@ AI agents read the declarative layer and translate checks to their current platf
 - No completion without verification — run `scripts/verify.sh` after changes
 - Agent topology is GENERATED from task analysis, not selected from presets
 - Context files must stay under 60 lines
+- Evolution must never remove verification (cancer prevention)
+- Evolution must never remove itself (suicide prevention)
+- All mutations must be reversible
 
 ### If You're Working in a Generated Project
 
