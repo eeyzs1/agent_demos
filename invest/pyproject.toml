@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trading-system"
+version = "0.1.0"
+description = "Automated trading system with research, strategy design, backtesting, and execution"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "akshare>=1.10",
+    "yfinance>=0.2",
+    "click>=8.1",
+    "rich>=13.0",
+    "pyyaml>=6.0",
+    "sqlalchemy>=2.0",
+    "pydantic>=2.0",
+    "ta>=0.10",
+    "httpx>=0.24",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1",
+]
+viz = [
+    "matplotlib>=3.7",
+]
+
+[project.scripts]
+trading = "trading_system.cli.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

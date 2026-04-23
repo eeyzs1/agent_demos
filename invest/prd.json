@@ -1,0 +1,463 @@
+{
+  "project": "AStockAdvisor",
+  "branchName": "astock/advisor-system",
+  "description": "A 股智能推荐系统 — 基于量化指标、市场情绪和热点分析，为 A 股投资者推荐股票和买卖点，最终实现自动化量化交易",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "实现 A 股 T+1 交易规则",
+      "description": "作为 A 股投资者，我需要系统遵守 T+1 规则（当日买入不能当日卖出），否则回测和推荐结果不真实",
+      "acceptanceCriteria": [
+        "Position 模型新增 is_t1_locked 字段，买入当日设为 True，次日自动解锁",
+        "RiskManager.check_positions() 在 is_t1_locked=True 时跳过卖出信号",
+        "BacktestEngine.run() 中正确处理 T+1：买入当天不能触发止损/止盈/信号卖出",
+        "回测中持仓的 entry_date 与当前交易日比较，同日不可卖出",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "A 股最基本规则，必须最先实现"
+    },
+    {
+      "id": "US-002",
+      "title": "实现 A 股涨跌停价格限制",
+      "description": "作为系统，我需要计算涨跌停价格并在下单时校验，防止推荐不可能成交的价格",
+      "acceptanceCriteria": [
+        "新增 ashare/calculator.py 模块，提供 calc_limit_price(prev_close, board_type) 函数",
+        "支持主板(±10%)、科创板/创业板(±20%)、ST股(±5%) 三种板块类型",
+        "PaperBroker.submit_order() 校验订单价格是否在涨跌停范围内",
+        "BacktestEngine 中信号价格超出涨跌停范围时自动钳位",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "依赖 US-001，因为 T+1 和涨跌停是 A 股两大基本规则"
+    },
+    {
+      "id": "US-003",
+      "title": "实现 A 股真实交易成本模型",
+      "description": "作为投资者，我需要回测和推荐中计入印花税、佣金、过户费等真实成本，否则绩效虚高",
+      "acceptanceCriteria": [
+        "新增 ashare/cost_model.py，提供 AShareCostCalculator 类",
+        "实现印花税计算：卖出时收取 0.05%",
+        "实现佣金计算：买卖双边收取，默认万2.5，最低5元",
+        "实现过户费计算：买卖双边收取 0.001%",
+        "BacktestEngine 使用 AShareCostCalculator 替代统一 commission_rate",
+        "PaperBroker 使用 AShareCostCalculator",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "成本模型直接影响回测可信度"
+    },
+    {
+      "id": "US-004",
+      "title": "接入 A 股财务数据（PE/PB/ROE）",
+      "description": "作为投资者，我需要基于基本面指标筛选股票，不能只看技术面",
+      "acceptanceCriteria": [
+        "AKShareSource 新增 fetch_financial(symbol) 方法，获取 PE/PB/ROE/营收增长率/净利润增长率",
+        "DataStore 新增 fetch_financial(symbol, source) 方法，支持缓存",
+        "新增 data/fundamental.py 模块，提供 FundamentalData 数据类",
+        "财务数据缓存 TTL 为 7 天（季报更新频率）",
+        "Tests pass"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "基本面数据是选股的基础，优先于选股引擎"
+    },
+    {
+      "id": "US-005",
+      "title": "接入北向资金数据",
+      "description": "作为投资者，我需要跟踪北向资金流向，这是 A 股重要的资金面信号",
+      "acceptanceCriteria": [
+        "AKShareSource 新增 fetch_north_flow() 方法，获取北向资金每日净流入",
+        "DataStore 新增 fetch_north_flow(source) 方法",
+        "新增 data/capital_flow.py 模块，提供 NorthFlowData 数据类",
+        "缓存 TTL 为 1 天",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "北向资金是 A 股特色指标，与 US-004 并行开发"
+    },
+    {
+      "id": "US-006",
+      "title": "接入龙虎榜数据",
+      "description": "作为投资者，我需要查看龙虎榜数据，了解主力资金动向",
+      "acceptanceCriteria": [
+        "AKShareSource 新增 fetch_dragon_tiger(date) 方法，获取龙虎榜明细",
+        "DataStore 新增 fetch_dragon_tiger(date, source) 方法",
+        "新增 data/dragon_tiger.py 模块，提供 DragonTigerData 数据类",
+        "解析龙虎榜中的买入/卖出营业部、金额、上榜原因",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "龙虎榜是短线选股的重要参考"
+    },
+    {
+      "id": "US-007",
+      "title": "实现股票池筛选引擎",
+      "description": "作为投资者，我需要系统自动从全市场中筛选出符合条件的候选股票，而不是手动添加观察列表",
+      "acceptanceCriteria": [
+        "新增 screener/engine.py 模块，提供 StockScreener 类",
+        "支持基本面筛选条件：PE 范围、PB 范围、ROE 下限、营收增长率下限",
+        "支持技术面筛选条件：均线多头排列、RSI 超卖/超买、成交量放大",
+        "支持流动性筛选条件：日均成交额下限、非 ST、非停牌、上市天数下限",
+        "支持组合条件：AND/OR 逻辑",
+        "screener/screen.py 提供预定义筛选模板（价值型/成长型/动量型）",
+        "Tests pass"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "依赖 US-004（财务数据），是推荐系统的核心组件"
+    },
+    {
+      "id": "US-008",
+      "title": "实现个股多因子评分模型",
+      "description": "作为投资者，我需要系统对每只股票打分排名，而不是只给出买卖信号",
+      "acceptanceCriteria": [
+        "新增 scorer/engine.py 模块，提供 StockScorer 类",
+        "技术面因子评分：趋势强度、动量、波动率、成交量变化（权重40%）",
+        "基本面因子评分：PE/PB 估值、ROE 盈利、营收增长（权重30%）",
+        "资金面因子评分：北向资金净流入、主力净流入、龙虎榜上榜（权重20%）",
+        "情绪面因子评分：新闻情绪、板块热度、市场整体情绪（权重10%）",
+        "输出 StockScore 数据类：总分、各因子分、排名、评级（强推/推荐/观望/回避）",
+        "Tests pass"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "依赖 US-004/005/006（数据源），是推荐系统的核心"
+    },
+    {
+      "id": "US-009",
+      "title": "实现买卖点推荐引擎",
+      "description": "作为投资者，我需要系统给出具体的买入价/卖出价和理由，而不是模糊的信号",
+      "acceptanceCriteria": [
+        "新增 advisor/entry_exit.py 模块，提供 EntryExitAdvisor 类",
+        "买入推荐：基于多因子评分 + 技术信号共振 + 资金面确认，给出建议买入价区间",
+        "卖出推荐：基于止损/止盈/追踪止损/超时平仓，给出建议卖出价",
+        "推荐理由：输出结构化的推荐原因（哪些因子触发、哪些信号共振）",
+        "风险提示：给出最大回撤预期、止损位、仓位建议",
+        "输出 TradeRecommendation 数据类",
+        "Tests pass"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "依赖 US-008（评分模型），是推荐系统的输出层"
+    },
+    {
+      "id": "US-010",
+      "title": "实现每日推荐报告生成",
+      "description": "作为投资者，我需要每天收到一份推荐报告，告诉我今天该关注哪些股票",
+      "acceptanceCriteria": [
+        "新增 advisor/daily_report.py 模块",
+        "每日收盘后自动运行：全市场扫描 → 评分 → 排名 → 生成推荐",
+        "报告内容：Top 10 推荐股票、各股评分详情、买卖点建议、风险提示",
+        "报告内容：持仓检查（已持仓股票的止损/止盈/追踪止损状态）",
+        "报告内容：市场情绪概览、北向资金动向、板块热点",
+        "输出格式：Markdown 文件 + 终端 Rich 渲染",
+        "CLI 新增 trading recommend 命令",
+        "Tests pass"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "依赖 US-009（推荐引擎），是用户可见的最终输出"
+    },
+    {
+      "id": "US-011",
+      "title": "实现推荐推送通知",
+      "description": "作为投资者，我需要推荐结果推送到手机，而不是每天手动查看系统",
+      "acceptanceCriteria": [
+        "advisor/daily_report.py 集成 NotificationManager",
+        "每日推荐报告自动推送到飞书/钉钉/微信",
+        "紧急通知：止损触发、回撤预警、强推股票出现时即时推送",
+        "通知内容模板化：标题 + 摘要 + 详情链接",
+        "Tests pass"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "依赖 US-010（报告生成），是推荐的触达渠道"
+    },
+    {
+      "id": "US-012",
+      "title": "实现 A 股规则回测引擎",
+      "description": "作为投资者，我需要回测结果反映 A 股真实交易环境（T+1、涨跌停、真实成本），否则回测不可信",
+      "acceptanceCriteria": [
+        "BacktestEngine 集成 T+1 规则（US-001）",
+        "BacktestEngine 集成涨跌停限制（US-002）",
+        "BacktestEngine 集成 A 股成本模型（US-003）",
+        "回测报告中显示扣除真实成本后的净收益",
+        "回测报告中显示 T+1 限制影响的交易次数",
+        "Tests pass"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "依赖 US-001/002/003，是验证策略的基础"
+    },
+    {
+      "id": "US-013",
+      "title": "实现推荐绩效追踪",
+      "description": "作为投资者，我需要看到历史推荐的准确率和盈亏情况，才能信任系统",
+      "acceptanceCriteria": [
+        "新增 advisor/tracker.py 模块，提供 RecommendationTracker 类",
+        "记录每条推荐的股票、价格、时间、评分、理由",
+        "追踪推荐后的实际走势：1日/3日/5日/10日收益率",
+        "统计推荐准确率、平均收益率、夏普比",
+        "输出推荐绩效报告：周度/月度汇总",
+        "使用 TradeDatabase 持久化推荐记录",
+        "Tests pass"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "依赖 US-010（推荐生成），是系统自我验证的闭环"
+    },
+    {
+      "id": "US-014",
+      "title": "实现板块轮动选股策略",
+      "description": "作为投资者，我需要系统根据板块轮动规律推荐当前热门板块的龙头股",
+      "acceptanceCriteria": [
+        "新增 strategy/sector_rotation.py 模块",
+        "利用 HotSpotDetector 的板块热度数据识别当前强势板块",
+        "在强势板块内用 StockScorer 筛选龙头股",
+        "板块轮动信号：资金流入 + 涨幅领先 + 龙虎榜上榜",
+        "输出 SectorRotationStrategy 类，继承 StrategyBase",
+        "Tests pass"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": "依赖 US-008（评分模型），是 A 股特色策略"
+    },
+    {
+      "id": "US-015",
+      "title": "实现北向资金跟随策略",
+      "description": "作为投资者，我需要系统跟踪北向资金动向，在聪明钱流入时跟随买入",
+      "acceptanceCriteria": [
+        "新增 strategy/north_flow.py 模块",
+        "信号逻辑：北向资金连续3日净流入 + 个股北向持股比例上升 → 买入信号",
+        "信号逻辑：北向资金连续3日净流出 + 个股北向持股比例下降 → 卖出信号",
+        "输出 NorthFlowStrategy 类，继承 StrategyBase",
+        "Tests pass"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": "依赖 US-005（北向资金数据），是 A 股特色策略"
+    },
+    {
+      "id": "US-016",
+      "title": "实现多策略融合推荐",
+      "description": "作为投资者，我需要系统综合多个策略的信号给出最终推荐，而不是每个策略独立运行",
+      "acceptanceCriteria": [
+        "SignalAggregator 新增 A 股策略注册：技术面策略 + 板块轮动 + 北向资金",
+        "多策略信号共振时提高置信度（3个策略同方向 → confidence=0.9）",
+        "信号矛盾时降低置信度或标记需人工确认",
+        "融合推荐结果纳入 StockScorer 的综合评分",
+        "Tests pass"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": "依赖 US-014/015（A 股策略），是推荐系统的信号融合层"
+    },
+    {
+      "id": "US-017",
+      "title": "实现推荐回测验证（Walk-Forward）",
+      "description": "作为投资者，我需要确认推荐系统在历史数据上的表现，避免过拟合",
+      "acceptanceCriteria": [
+        "BacktestEngine.walk_forward_run() 使用 A 股规则回测",
+        "训练窗口60% + 测试窗口40%，滚动前进",
+        "输出样本外绩效：年化收益、夏普比、最大回撤",
+        "对比样本内 vs 样本外绩效，差距过大时标记过拟合风险",
+        "Tests pass"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": "依赖 US-012（A 股回测引擎），是验证推荐系统的关键"
+    },
+    {
+      "id": "US-018",
+      "title": "实现 QMT 券商接口适配层",
+      "description": "作为投资者，我需要系统最终能通过券商接口自动下单，实现真正的自动交易",
+      "acceptanceCriteria": [
+        "新增 execution/qmt_broker.py 模块，实现 BrokerInterface 接口",
+        "实现 QMT 连接管理：登录、断线重连、心跳",
+        "实现 submit_order()：通过 QMT API 提交委托",
+        "实现 cancel_order()：通过 QMT API 撤单",
+        "实现 get_positions()：查询实际持仓",
+        "实现 get_account()：查询资金余额",
+        "TradingEngine 支持 mode='qmt' 时使用 QmtBroker",
+        "Tests pass"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": "终局功能，需要 QMT 账号和 SDK，优先级最低但必须预留接口"
+    },
+    {
+      "id": "US-019",
+      "title": "实现自动交易执行引擎",
+      "description": "作为投资者，我需要系统在推荐生成后自动执行交易，无需人工干预",
+      "acceptanceCriteria": [
+        "TradingEngine.run_loop() 集成推荐引擎：扫描 → 评分 → 推荐 → 执行",
+        "执行前风控检查：单日亏损上限、总仓位上限、单股仓位上限",
+        "执行后确认：检查委托状态、成交价格、成交数量",
+        "异常处理：委托失败自动重试、部分成交处理、网络断线恢复",
+        "所有交易动作记录审计日志",
+        "Tests pass"
+      ],
+      "priority": 19,
+      "passes": true,
+      "notes": "依赖 US-018（QMT 接口），是自动化的最后一步"
+    },
+    {
+      "id": "US-020",
+      "title": "实现系统健康监控和自动恢复",
+      "description": "作为投资者，我需要系统 7x24 稳定运行，出现异常自动恢复并通知我",
+      "acceptanceCriteria": [
+        "新增 monitor/health.py 模块，提供 HealthMonitor 类",
+        "监控指标：数据源可用性、行情延迟、交易执行成功率、系统资源使用",
+        "异常检测：行情中断、委托超时、持仓异常、资金异常",
+        "自动恢复：数据源切换（akshare↔yfinance）、断线重连、状态恢复",
+        "告警推送：系统异常时通过 NotificationManager 推送",
+        "Tests pass"
+      ],
+      "priority": 20,
+      "passes": true,
+      "notes": "依赖 US-011（通知推送），是自动化的运维保障"
+    },
+    {
+      "id": "US-021",
+      "title": "实现交易时段保护",
+      "description": "作为投资者，我需要系统只在 A 股交易时段（9:30-11:30/13:00-15:00）产生信号和下单，防止非交易时间误操作",
+      "acceptanceCriteria": [
+        "新增 ashare/trading_session.py 模块，提供 TradingSession 类",
+        "实现 is_trading_time() 方法，判断当前是否在 A 股交易时段",
+        "实现 is_trading_day() 方法，判断是否为交易日（排除周末和法定节假日）",
+        "TradingEngine.run_loop() 在非交易时段跳过信号生成和下单",
+        "BacktestEngine 不受影响（回测数据本身是交易日数据）",
+        "Tests pass"
+      ],
+      "priority": 21,
+      "passes": true,
+      "notes": "实盘最基本的安全保障，防止程序在非交易时间乱下单"
+    },
+    {
+      "id": "US-022",
+      "title": "实现硬风控熔断机制",
+      "description": "作为投资者，我需要系统在单日亏损过大或总回撤超限时自动停止交易，防止灾难性亏损",
+      "acceptanceCriteria": [
+        "新增 risk/circuit_breaker.py 模块，提供 CircuitBreaker 类",
+        "实现单日亏损熔断：当日亏损超过3%自动停止所有新开仓",
+        "实现总回撤熔断：总资产回撤超过10%自动停止所有交易",
+        "实现下单频率熔断：1分钟内下单超过5笔自动暂停",
+        "实现单股集中度熔断：单股仓位超过总资产30%禁止继续买入",
+        "熔断触发后通过 NotificationManager 推送紧急通知",
+        "熔断状态可手动重置（需确认）",
+        "Tests pass"
+      ],
+      "priority": 22,
+      "passes": true,
+      "notes": "实盘级别风控的核心，没有熔断机制绝对不能上实盘"
+    },
+    {
+      "id": "US-023",
+      "title": "实现异常价格过滤和数据缺失检测",
+      "description": "作为投资者，我需要系统过滤掉乌龙指等异常价格，并在数据缺失时安全降级而非产生错误信号",
+      "acceptanceCriteria": [
+        "新增 data/validator.py 模块，提供 DataValidator 类",
+        "实现异常价格检测：价格偏离前收盘价超过±30%标记为异常",
+        "实现数据缺失检测：OHLCV 数据中存在 None/NaN 时标记数据不完整",
+        "实现数据时效检测：最新数据时间超过5分钟标记为过期",
+        "DataStore.fetch_realtime() 返回数据前经过 DataValidator 校验",
+        "异常数据不参与策略信号计算，记录警告日志",
+        "Tests pass"
+      ],
+      "priority": 23,
+      "passes": true,
+      "notes": "数据质量是量化系统的生命线，脏数据会导致错误信号"
+    },
+    {
+      "id": "US-024",
+      "title": "实现交易状态持久化和崩溃恢复",
+      "description": "作为投资者，我需要系统崩溃重启后能恢复之前的持仓和交易状态，而不是丢失所有信息",
+      "acceptanceCriteria": [
+        "新增 execution/state_manager.py 模块，提供 StateManager 类",
+        "每次开仓/平仓后自动持久化持仓状态到 JSON 文件",
+        "每次下单后自动持久化当日交易记录",
+        "程序启动时自动加载上次保存的状态",
+        "检测到状态文件损坏时从券商重新同步持仓",
+        "状态文件路径可配置，默认 ./data/state/",
+        "Tests pass"
+      ],
+      "priority": 24,
+      "passes": true,
+      "notes": "没有状态持久化，程序崩溃=丢失持仓信息=无法风控"
+    },
+    {
+      "id": "US-025",
+      "title": "实现交易对账机制",
+      "description": "作为投资者，我需要系统定期与券商对账，确保程序记录与实际持仓一致，防止状态漂移",
+      "acceptanceCriteria": [
+        "新增 execution/reconciler.py 模块，提供 Reconciler 类",
+        "实现每日收盘后自动对账：程序持仓 vs 券商持仓",
+        "实现资金对账：程序记录的资金 vs 券商返回的资金",
+        "不一致时生成差异报告并推送告警",
+        "支持手动触发对账（CLI 命令）",
+        "对账结果记录审计日志",
+        "Tests pass"
+      ],
+      "priority": 25,
+      "passes": true,
+      "notes": "对账是发现程序bug和数据漂移的唯一手段"
+    },
+    {
+      "id": "US-026",
+      "title": "实现策略参数优化框架",
+      "description": "作为投资者，我需要系统自动搜索最优策略参数，而不是手动调参",
+      "acceptanceCriteria": [
+        "新增 backtest/optimizer.py 模块，提供 StrategyOptimizer 类",
+        "支持网格搜索（Grid Search）：遍历参数组合",
+        "支持随机搜索（Random Search）：随机采样参数空间",
+        "优化目标可配置：年化收益、夏普比、Calmar比",
+        "输出参数排名表：Top 10 参数组合及其绩效",
+        "CLI 新增 trading optimize 命令",
+        "Tests pass"
+      ],
+      "priority": 26,
+      "passes": true,
+      "notes": "当前策略参数都是默认值，必须经过优化才能用于实盘"
+    },
+    {
+      "id": "US-027",
+      "title": "实现回测基准对比和前视偏差修正",
+      "description": "作为投资者，我需要回测结果与沪深300基准对比，并确保回测没有使用未来数据",
+      "acceptanceCriteria": [
+        "BacktestResult 新增 benchmark 字段，记录基准收益",
+        "新增 backtest/benchmark.py 模块，提供 BenchmarkCalculator 类",
+        "支持沪深300/中证500/创业板指作为基准",
+        "输出超额收益（Alpha）和信息比率（IR）",
+        "BacktestEngine 信号生成只使用当日开盘前的数据，不使用当日收盘价",
+        "回测报告中新增基准对比表格",
+        "Tests pass"
+      ],
+      "priority": 27,
+      "passes": true,
+      "notes": "没有基准对比就不知道策略是否有效，前视偏差会让回测结果虚高"
+    },
+    {
+      "id": "US-028",
+      "title": "实现 CI/CD 和代码质量保障",
+      "description": "作为开发者，我需要代码提交时自动运行测试和代码检查，防止引入bug",
+      "acceptanceCriteria": [
+        "新增 .github/workflows/ci.yml，配置 GitHub Actions",
+        "CI 流程：ruff check → mypy → pytest → coverage",
+        "测试覆盖率目标 ≥70%",
+        "新增 .pre-commit-config.yaml，配置 pre-commit 钩子",
+        "新增 conftest.py，集中管理共享 fixture",
+        "Tests pass（CI 流程本身可运行）",
+        "Tests pass"
+      ],
+      "priority": 28,
+      "passes": true,
+      "notes": "工程化保障，确保代码质量不退化"
+    }
+  ]
+}

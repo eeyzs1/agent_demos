@@ -1,0 +1,71 @@
+name: automated-trading-harness
+version: "1.0"
+domain: automation
+template_base: automation
+
+constraints:
+  - id: C001
+    name: mandatory_stop_loss
+    description: Every trade must have explicit stop-loss
+    enforcement: RiskManager.validate_signal rejects signals without stop_loss
+    trace: hard_constraint "No trade without stop-loss"
+
+  - id: C002
+    name: backtest_before_live
+    description: All strategies must be backtested before live deployment
+    enforcement: CLI backtest command required; no live mode without backtest results
+    trace: hard_constraint "No trade without backtest validation"
+
+  - id: C003
+    name: max_drawdown_limit
+    description: System enforces maximum drawdown limit (default 20%)
+    enforcement: RiskManager activates circuit breaker when drawdown exceeds limit
+    trace: hard_constraint "Maximum drawdown limit enforced"
+
+  - id: C004
+    name: paper_trading_first
+    description: Paper trading mode must be used before live trading
+    enforcement: Config default mode is "paper"; explicit flag required for "live"
+    trace: hard_constraint "Paper trading mode before live"
+
+  - id: C005
+    name: audit_trail
+    description: All trades and system actions must be logged
+    enforcement: AuditLogger writes JSONL for all actions and trades
+    trace: hard_constraint "All actions logged with audit trail"
+
+  - id: C006
+    name: circuit_breaker
+    description: Circuit breaker activates on extreme losses
+    enforcement: RiskManager monitors daily loss and drawdown
+    trace: system_capability "Withstand extreme market events"
+
+workflows:
+  - name: strategy_development
+    steps:
+      - Define strategy parameters
+      - Backtest on historical data
+      - Evaluate 7 key metrics
+      - Validate risk/reward ratio >= 1.5
+      - Paper trade for minimum period
+      - Review audit logs
+      - Deploy to live (if all criteria met)
+
+  - name: daily_trading
+    steps:
+      - Check circuit breaker status
+      - Fetch market data for watchlist
+      - Detect market state
+      - Generate signals from active strategies
+      - Validate signals through risk manager
+      - Execute approved signals
+      - Monitor positions for SL/TP
+      - Log all actions
+
+  - name: risk_monitoring
+    steps:
+      - Calculate current drawdown
+      - Check consecutive losses
+      - Verify position exposure limits
+      - Trigger circuit breaker if needed
+      - Alert on risk events

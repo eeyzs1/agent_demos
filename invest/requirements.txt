@@ -1,8 +1,0 @@
-langgraph
-langchain
-langchain_community
-openai
-python-dotenv
-requests
-beautifulsoup4
-pandas

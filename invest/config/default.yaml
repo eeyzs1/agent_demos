@@ -1,0 +1,49 @@
+trading:
+  mode: paper
+  initial_capital: 100000.0
+  base_currency: CNY
+
+risk:
+  max_risk_per_trade: 0.02
+  max_drawdown_limit: 0.20
+  max_consecutive_losses: 10
+  circuit_breaker_loss_pct: 0.05
+  circuit_breaker_cooldown_days: 3
+  target_volatility: 0.20
+  vol_lookback_days: 20
+  drawdown_soft_limit: 0.10
+  drawdown_hard_limit: 0.20
+  trailing_stop_pct: 0.05
+  trailing_stop_activate_pct: 0.03
+  max_holding_days: 30
+  min_confidence: 0.3
+
+strategy:
+  default_stop_loss_pct: 0.05
+  default_take_profit_rr: 3.0
+  min_rr_ratio: 1.5
+
+data:
+  primary_source: akshare
+  cache_dir: ./data/cache
+  database_url: sqlite:///./data/trading.db
+
+watchlist:
+  default_lists:
+    - name: "沪深300成分"
+      symbols: []
+      auto_fetch: true
+    - name: "自选股"
+      symbols: []
+      auto_fetch: false
+
+logging:
+  level: INFO
+  audit_file: ./logs/audit.jsonl
+  trade_log: ./logs/trades.jsonl
+
+notification:
+  feishu_webhook: ""
+  dingtalk_webhook: ""
+  dingtalk_secret: ""
+  wechat_sckey: ""
