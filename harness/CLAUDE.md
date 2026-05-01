@@ -1,92 +1,81 @@
-# Harness Engineering Framework — AGENT OPERATING INSTRUCTIONS
+# Meta-Harness — AGENT OPERATING INSTRUCTIONS
 
 ## ⚠️ MANDATORY: Read This Before Taking Any Action
 
-You are operating inside a meta-harness system. You MUST follow these instructions.
-Do NOT skip to coding. Do NOT plan on your own. Follow the protocol below.
+This project is a META-HARNESS — it does NOT do the work itself.
+It GENERATES a complete, runnable, self-evolving harness engineering project
+that THEN does the work. Your job is to run the generation pipeline.
 
 ## First Principles (Override Everything Else)
 
-1. **Do not assume the user knows what they want.** When motivation or goal is unclear, STOP and discuss.
-2. **If the goal is clear but the path isn't optimal, say so.** Suggest the better way directly.
+1. **Do not assume the user knows what they want.** When unclear, STOP and discuss.
+2. **If the goal is clear but the path isn't optimal, say so.** Suggest the better way.
 3. **Chase root causes, never patch symptoms.** Every decision must answer "why".
 4. **Output only what changes decisions.** Cut everything else.
 
-## The Core Loop (NOT a Linear Pipeline)
-
-The system NEVER stops after one execution. It loops until PROVEN done:
+## The Core Loop
 
 ```
 ┌─→ INTERPRET: What does the user actually need? (first principles)
 │       ↓
-│   GENERATE: Create harness + agents for THIS specific need
+│   GENERATE: Create a COMPLETE harness project (7 layers + 2 cross-cutting + evolution)
 │       ↓
-│   EXECUTE: Do the work within generated constraints
+│   PROVE:   Does the generated project cover all 7 layers? Can it run? Can it evolve?
 │       ↓
-│   PROVE:   Produce EVIDENCE that output satisfies original need
-│       ↓
-│   JUDGE:   Does the evidence convince? ──→ NO → diagnose root cause, loop back
+│   JUDGE:   Is the generated project sufficient? ──→ NO → root cause → loop back
 │       ↓
 │   YES
 │       ↓
-└── EVOLVE:  What did we learn? Improve the harness. Then STOP.
+└── EVOLVE:  What did we learn about generation? Improve the meta-harness.
 ```
 
 ## Step-by-Step Protocol
 
 ### Step 1: Interpret (First Principles)
-Read `meta/interpreter.md`. Follow its instructions exactly.
-Key: Do NOT start from templates. Start from the user's raw need.
-Question every assumption. If the goal is unclear, STOP and ask.
+Read `meta/interpreter.md`. Understand the REAL need.
+Do NOT start from templates. Start from the problem.
 
-### Step 2: Generate Harness
-After user confirms task definition, read `meta/harness-generator.md`.
-Generate ONLY what's needed — no boilerplate, no "just in case" constraints.
+### Step 2: Generate Complete Harness Project
+Read `meta/harness-generator.md`. Generate ALL seven layers:
+1. Context Engineering (AGENTS.md, context loader, knowledge index)
+2. Tool Integration (schemas, sandbox, permissions, MCP)
+3. Memory & State (session state, long-term memory, snapshots, compression)
+4. Planning & Orchestration (DAG, flow control, sub-agents, budgets)
+5. Verification & Guardrails (format validators, consistency, security, self-check)
+6. Feedback & Self-Healing (error capture, retry, optimization loop, human interface)
+7. Constraints & Entropy (architecture rules, enforcement, entropy reduction, cost)
+
+Plus two cross-cutting systems:
+- Security & Isolation (sandbox, encryption, audit)
+- Observability & Governance (tracing, metrics, replay, versioning)
+
+Plus self-evolution system (evidence-driven).
 
 ### Step 3: Generate Agent Topology
 Read `meta/agent-factory.md`. Generate topology from task analysis.
 
-### Step 4: Execute
-Read `meta/orchestrator.md`. Execute within generated harness.
-After execution, do NOT stop. Continue to Step 5.
+### Step 4: Prove Completeness
+For each of the 7 layers + 2 cross-cutting systems:
+- Verify at least one concrete artifact was generated
+- Verify artifacts are executable, not just documentation
+- Verify evidence traceability exists
 
-### Step 5: Prove (Evidence Traceability)
-For EVERY acceptance criterion from Step 1:
-- Produce specific evidence that it is satisfied
-- Evidence must be: test results, working output, measurable metrics
-- If you cannot produce evidence → the criterion is NOT met → loop back
+### Step 5: Judge
+Can the generated project actually run and self-evolve?
+If NO → diagnose root cause, loop back.
 
-### Step 6: Judge
-Ask: "Does the evidence convincingly prove the output satisfies the user's original need?"
-- If NO → diagnose root cause (not symptom), loop back to the failing step
-- If YES → proceed to Step 7
+### Step 6: Evolve Meta-Harness
+What did we learn about the generation process? Improve `meta/` and `templates/`.
 
-### Step 7: Evolve
-Read `evolution/framework.md`. Record what worked and what didn't.
-Improve the harness based on evidence, not guesses.
+## Absolute Rules
 
-## Absolute Rules (NEVER Violate)
-
-1. No execution without interpretation — always interpret first
-2. No agent without a harness — always generate constraints first
-3. No constraint without a reason — every rule must answer "why"
-4. No completion without EVIDENCE — output must prove it satisfies the original need
-5. No single-pass execution — the loop continues until evidence proves success
-6. No patching symptoms — always chase root causes
-7. Every generation logged to `memory/generation-log.md`
-8. Every failure logged to `memory/meta-mistakes.md` with ROOT CAUSE
-9. Evolution never removes verification (cancer prevention)
-10. Evolution never removes itself (suicide prevention)
-11. All mutations must be reversible
-12. Context files stay under 60 lines
-
-## Architecture Reference
-```
-META.md              ← Full pipeline specification
-meta/                ← Pipeline stages (interpreter → generator → factory → orchestrator)
-evolution/           ← Self-evolution system (framework, genome, log)
-templates/           ← Domain templates (reference only, NOT starting point)
-generated/           ← Output of the meta-harness
-memory/              ← Meta-level knowledge
-scripts/             ← Utility scripts (verify, pre-task, quality-score)
-```
+1. No execution without interpretation
+2. No agent without a harness
+3. No constraint without a reason
+4. No completion without EVIDENCE
+5. No single-pass execution — loop until proven
+6. No patching symptoms — chase root causes
+7. Generate EXECUTABLE systems, not just documents
+8. Every generated layer must have concrete artifacts
+9. Evolution never removes verification or itself
+10. All mutations reversible

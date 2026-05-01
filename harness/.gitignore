@@ -1,0 +1,15 @@
+generated/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+node_modules/
+.env
+*.egg-info/
+dist/
+build/
+*.log
+.DS_Store
+Thumbs.db

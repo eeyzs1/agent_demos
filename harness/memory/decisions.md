@@ -6,13 +6,23 @@ Agents need to understand context to make consistent decisions.
 
 ## Decisions
 
-### ADR-001: Five-Layer Harness Architecture
-- Date: 2026-04-14
-- Context: Need agent-agnostic quality infrastructure
-- Decision: Organize harness into 5 layers (Identity, Constraints, Workflows, Verification, Memory)
-- Alternatives: Single config file; prompt-only approach; tool-specific setup
-- Why: Layers separate concerns. Each layer has a clear purpose and can evolve independently.
-- Consequences: More files to maintain, but each file is small and focused.
+### ADR-001: Seven-Layer + Two Cross-Cutting Harness Architecture
+- Date: 2026-04-14 (updated 2026-05-01)
+- Context: Need agent-agnostic quality infrastructure that generates EXECUTABLE systems, not just documents
+- Decision: Organize harness into 7 layers + 2 cross-cutting systems + self-evolution:
+  - Layer 1: Context Engineering (AGENTS.md, context loader, knowledge index)
+  - Layer 2: Tool Integration (schemas, sandbox, permissions, MCP)
+  - Layer 3: Memory & State (session state, long-term memory, snapshots, compression)
+  - Layer 4: Planning & Orchestration (DAG, flow control, sub-agents, budgets)
+  - Layer 5: Verification & Guardrails (format validators, consistency, security, self-check)
+  - Layer 6: Feedback & Self-Healing (error capture, retry, optimization loop, human interface)
+  - Layer 7: Constraints & Entropy (architecture rules, enforcement, entropy reduction, cost)
+  - Cross-cutting A: Security & Isolation (sandbox, encryption, audit)
+  - Cross-cutting B: Observability & Governance (tracing, metrics, replay, versioning)
+  - Self-Evolution: evidence-driven evolution with genome, fitness, mutations
+- Alternatives: Single config file; prompt-only approach; 5-layer architecture (Identity, Constraints, Workflows, Verification, Memory); tool-specific setup
+- Why: 5 layers were insufficient — they produced documentation, not executable systems. The 7+2+evolution architecture ensures every layer has concrete executable artifacts, not just markdown descriptions. Cross-cutting concerns (security, observability) span all layers and must be first-class.
+- Consequences: More files and complexity, but each layer produces runnable artifacts. Generation pipeline must verify all layers have executable output.
 
 ### ADR-002: Mistake-Driven Constraint Evolution
 - Date: 2026-04-14

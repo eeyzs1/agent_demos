@@ -4,6 +4,10 @@
 Track every harness generation. This is the meta-harness's version control.
 Enables: learning from past generations, avoiding repeated mistakes, measuring improvement.
 
+The YAML version of this log is maintained by `scripts/generate.py` at
+`memory/generation-log.yaml`. This markdown file serves as the human-readable
+companion and manual entry point.
+
 ## Format
 ```
 ## Generation [N]
@@ -20,4 +24,4 @@ Enables: learning from past generations, avoiding repeated mistakes, measuring i
 
 ## Generations
 
-(No generations yet. Open this project in an AI IDE and give a task to start.)
+(No generations yet. Run `python scripts/generate.py --task <task-file>` to start.)
