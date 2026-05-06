@@ -41,6 +41,35 @@ Every generated harness project MUST have all of these layers with executable ar
 | Cross-cutting B: Observability | `observability/` | Tracing, metrics, replay, versioning | `tracing.yaml`, `metrics-dashboard.yaml`, `session-replay.yaml`, `versioning.yaml` |
 | Self-Evolution | `evolution/` | Evidence-driven evolution with genome and fitness | `framework.md`, `genome.yaml`, `log.yaml` |
 | Innovation | `evolution/` | Post-requirement innovation engine (推陈出新) | `innovation-engine.py`, `product-analyzer.py`, `domain-advancements.yaml` |
+| Enforcement (Root) | `./` | Entry points and mandatory pre-action guard | `orchestrator.py`, `guard.py`, `AGENTS.md`, `CLAUDE.md` |
+
+## Enforcement System: guard.py + orchestrator.py
+
+Every generated project MUST have two root-level enforcement scripts:
+
+### guard.py — Pre-Action Constraint Guard
+- **Runs BEFORE any code change** — validates planned actions against architecture rules
+- Blocks actions that violate constraints (wrong layer access, dependency direction, etc.)
+- Returns PASS or BLOCKED with specific violation descriptions
+- Checks that orchestrator has been run first
+- Usage: `python guard.py --check "I plan to add a new API endpoint"`
+
+### orchestrator.py — Active Execution Engine
+- **THE entry point** — tracks progress, manages criteria, enforces verification
+- `--status` shows current progress and next criterion
+- `--verify` runs full verification suite (self-check + consistency + guard report)
+- `--mark-complete` runs verification BEFORE allowing mark — prevents self-certification
+- `--evolve` runs evolution cycle after all criteria met
+- `--innovate` runs innovation engine (推陈出新)
+
+### Enforcement Chain
+```
+AI starts → reads AGENTS.md → runs orchestrator.py --status
+  → identifies next criterion → runs guard.py --check "plan"
+  → if PASS → implements code → runs orchestrator.py --verify
+  → if PASS → runs orchestrator.py --mark-complete
+  → if ALL DONE → runs orchestrator.py --evolve → --innovate
+```
 
 ## Innovation Engine: 推陈出新
 

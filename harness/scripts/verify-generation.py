@@ -147,7 +147,7 @@ def verify_project(project_dir: Path) -> dict:
 
     results = {"project_dir": str(project_dir), "layers": {}, "root_files": {}, "overall_passed": True}
 
-    for name in ["AGENTS.md", "CLAUDE.md"]:
+    for name in ["AGENTS.md", "CLAUDE.md", ".cursorrules", "orchestrator.py", "guard.py"]:
         results["root_files"][name] = (project_dir / name).exists()
 
     for layer, requirements in LAYER_REQUIREMENTS.items():
