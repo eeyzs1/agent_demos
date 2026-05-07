@@ -1,12 +1,38 @@
 import logging
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+from functools import wraps
+from typing import Callable
 
 import httpx
 
 logger = logging.getLogger(__name__)
+
+
+def retry_on_failure(max_retries: int = 3, base_delay: float = 1.0):
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    result = func(*args, **kwargs)
+                    if result:
+                        return result
+                except Exception as e:
+                    last_exception = e
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    time.sleep(delay)
+            if last_exception:
+                logger.error("Retry exhausted: %s failed after %d attempts: %s",
+                             func.__name__, max_retries, last_exception)
+            return False
+        return wrapper
+    return decorator
 
 
 class NotificationLevel(str, Enum):
@@ -124,6 +150,7 @@ class FeishuChannel(NotificationChannel):
             logger.error("Feishu notification failed: %s", e)
         return False
 
+    @retry_on_failure(max_retries=3, base_delay=1.0)
     def send_sync(self, message: NotificationMessage) -> bool:
         try:
             payload = message.to_feishu_card()
@@ -185,6 +212,7 @@ class DingTalkChannel(NotificationChannel):
             logger.error("DingTalk notification failed: %s", e)
         return False
 
+    @retry_on_failure(max_retries=3, base_delay=1.0)
     def send_sync(self, message: NotificationMessage) -> bool:
         try:
             payload = message.to_dingtalk_markdown()
@@ -226,6 +254,7 @@ class WeChatChannel(NotificationChannel):
             logger.error("WeChat notification failed: %s", e)
         return False
 
+    @retry_on_failure(max_retries=3, base_delay=1.0)
     def send_sync(self, message: NotificationMessage) -> bool:
         try:
             data = {"title": message.title, "desp": message.content}

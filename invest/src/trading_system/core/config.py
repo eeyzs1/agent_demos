@@ -1,7 +1,37 @@
 from pathlib import Path
+import os
 
 import yaml
 from pydantic import BaseModel, Field
+
+
+def _load_dotenv(dotenv_path: Path | None = None) -> None:
+    if dotenv_path is None:
+        dotenv_path = Path(".env")
+    if not dotenv_path.exists():
+        return
+
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(dotenv_path)
+        return
+    except ImportError:
+        pass
+
+    with open(dotenv_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, val = line.partition("=")
+            key = key.strip()
+            val = val.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = val
+
+
+def _env(key: str, default: str = "") -> str:
+    return os.environ.get(key, default)
 
 
 class RiskConfig(BaseModel):
@@ -39,16 +69,20 @@ class LoggingConfig(BaseModel):
 
 
 class TradingConfig(BaseModel):
-    mode: str = Field(default="paper", pattern="^(paper|live)$")
+    mode: str = Field(default="paper")
     initial_capital: float = Field(default=100000.0, gt=0)
     base_currency: str = "CNY"
+    qmt_path: str = Field(default_factory=lambda: _env("QMT_PATH"))
+    qmt_account: str = Field(default_factory=lambda: _env("QMT_ACCOUNT"))
+    qmt_password: str = Field(default_factory=lambda: _env("QMT_PASSWORD"))
+    qmt_trade_mode: int = Field(default=0)
 
 
 class NotificationConfig(BaseModel):
-    feishu_webhook: str = ""
-    dingtalk_webhook: str = ""
-    dingtalk_secret: str = ""
-    wechat_sckey: str = ""
+    feishu_webhook: str = Field(default_factory=lambda: _env("FEISHU_WEBHOOK"))
+    dingtalk_webhook: str = Field(default_factory=lambda: _env("DINGTALK_WEBHOOK"))
+    dingtalk_secret: str = Field(default_factory=lambda: _env("DINGTALK_SECRET"))
+    wechat_sckey: str = Field(default_factory=lambda: _env("WECHAT_SCKEY"))
 
 
 class AppConfig(BaseModel):
@@ -60,12 +94,27 @@ class AppConfig(BaseModel):
     notification: NotificationConfig = NotificationConfig()
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "AppConfig":
+    def from_yaml(cls, path: str | Path, load_env: bool = True) -> "AppConfig":
+        if load_env:
+            _load_dotenv(Path(".env"))
+
         p = Path(path)
         if not p.exists():
             return cls()
         with open(p, "r", encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
+
+        for section in ("trading", "notification"):
+            if section not in raw:
+                raw[section] = {}
+        raw["trading"]["qmt_path"] = _env("QMT_PATH")
+        raw["trading"]["qmt_account"] = _env("QMT_ACCOUNT")
+        raw["trading"]["qmt_password"] = _env("QMT_PASSWORD")
+        raw["notification"]["feishu_webhook"] = _env("FEISHU_WEBHOOK")
+        raw["notification"]["dingtalk_webhook"] = _env("DINGTALK_WEBHOOK")
+        raw["notification"]["dingtalk_secret"] = _env("DINGTALK_SECRET")
+        raw["notification"]["wechat_sckey"] = _env("WECHAT_SCKEY")
+
         return cls(**raw)
 
     @classmethod

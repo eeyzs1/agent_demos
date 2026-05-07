@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+from trading_system.analysis.indicators import calculate_atr, calculate_rsi
 from trading_system.strategy.base import MarketState
 
 
@@ -46,7 +47,7 @@ class MarketAnalyzer:
         df["macd_signal"] = df["macd"].ewm(span=9, adjust=False).mean()
         df["macd_hist"] = df["macd"] - df["macd_signal"]
 
-        df["rsi_14"] = MarketAnalyzer._calculate_rsi(df["close"], 14)
+        df["rsi_14"] = calculate_rsi(df["close"], 14)
 
         bb_period = 20
         bb_std = 2.0
@@ -55,7 +56,7 @@ class MarketAnalyzer:
         df["bb_upper"] = df["bb_mid"] + bb_std_val * bb_std
         df["bb_lower"] = df["bb_mid"] - bb_std_val * bb_std
 
-        df["atr_14"] = MarketAnalyzer._calculate_atr(df, 14)
+        df["atr_14"] = calculate_atr(df, 14)
 
         df["volume_sma_20"] = df["volume"].rolling(window=20).mean()
         df["volume_ratio"] = df["volume"] / df["volume_sma_20"]
@@ -114,27 +115,6 @@ class MarketAnalyzer:
             else None,
             "signals": signals,
         }
-
-    @staticmethod
-    def _calculate_rsi(close: pd.Series, period: int) -> pd.Series:
-        delta = close.diff()
-        gain = delta.where(delta > 0, 0.0)
-        loss = -delta.where(delta < 0, 0.0)
-        avg_gain = gain.rolling(window=period).mean()
-        avg_loss = loss.rolling(window=period).mean()
-        rs = avg_gain / avg_loss.replace(0, np.inf)
-        return 100 - (100 / (1 + rs))
-
-    @staticmethod
-    def _calculate_atr(df: pd.DataFrame, period: int) -> pd.Series:
-        high = df["high"]
-        low = df["low"]
-        close = df["close"]
-        tr1 = high - low
-        tr2 = abs(high - close.shift(1))
-        tr3 = abs(low - close.shift(1))
-        tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-        return tr.rolling(window=period).mean()
 
     @staticmethod
     def _calculate_adx(data: pd.DataFrame, period: int = 14) -> float:

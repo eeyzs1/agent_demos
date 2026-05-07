@@ -46,9 +46,9 @@ class TradingEngine:
         elif config.trading.mode == "qmt":
             from trading_system.execution.qmt_broker import QmtBroker
             self._broker = QmtBroker(
-                qmt_path=getattr(config.trading, "qmt_path", ""),
-                account_id=getattr(config.trading, "qmt_account", ""),
-                password=getattr(config.trading, "qmt_password", ""),
+                qmt_path=config.trading.qmt_path,
+                account_id=config.trading.qmt_account,
+                password=config.trading.qmt_password,
             )
             connect_result = self._broker.connect()
             if not connect_result:
@@ -95,6 +95,9 @@ class TradingEngine:
     def process_signal(self, signal: Signal) -> Optional[Order]:
         self._risk_manager.update_price_history(signal.symbol, signal.price)
 
+        if signal.signal_type == SignalType.SELL:
+            return self._handle_sell_signal(signal)
+
         valid, reason = self._risk_manager.validate_signal(signal)
         if not valid:
             logger.warning("Signal rejected: %s - %s", signal.symbol, reason)
@@ -117,11 +120,10 @@ class TradingEngine:
             logger.warning("Position size is 0 for %s", signal.symbol)
             return None
 
-        side = OrderSide.BUY if signal.signal_type == SignalType.BUY else OrderSide.SELL
         order = Order(
             order_id="",
             symbol=signal.symbol,
-            side=side,
+            side=OrderSide.BUY,
             order_type=OrderType.MARKET,
             quantity=quantity,
             price=signal.price,
@@ -135,7 +137,7 @@ class TradingEngine:
             self._audit.log_trade(
                 trade_id=filled_order.order_id,
                 symbol=signal.symbol,
-                side=side.value,
+                side=OrderSide.BUY.value,
                 quantity=quantity,
                 price=filled_order.filled_price or signal.price,
                 strategy=signal.strategy_name,
@@ -147,6 +149,67 @@ class TradingEngine:
                 Event(
                     type=EventType.ORDER_FILLED,
                     data={"order_id": filled_order.order_id, "symbol": signal.symbol},
+                    source=signal.strategy_name,
+                )
+            )
+        else:
+            self._event_bus.publish_sync(
+                Event(
+                    type=EventType.ORDER_REJECTED,
+                    data={"order_id": filled_order.order_id, "reason": "fill_failed"},
+                    source=signal.strategy_name,
+                )
+            )
+
+        return filled_order
+
+    def _handle_sell_signal(self, signal: Signal) -> Optional[Order]:
+        positions = self._risk_manager.positions
+        if signal.symbol not in positions:
+            logger.warning(
+                "A-share 不支持做空，无持仓 %s，忽略卖出信号", signal.symbol
+            )
+            return None
+
+        pos = positions[signal.symbol]
+        if pos.side != PositionSide.LONG:
+            logger.warning("A-share 不支持做空，%s 非多头仓位，忽略卖出信号", signal.symbol)
+            return None
+
+        if pos.is_t1_locked:
+            logger.info("A-share T+1 锁定，%s 今日买入不可卖出", signal.symbol)
+            return None
+
+        order = Order(
+            order_id="",
+            symbol=signal.symbol,
+            side=OrderSide.SELL,
+            order_type=OrderType.MARKET,
+            quantity=pos.quantity,
+            price=signal.price,
+            strategy_name=signal.strategy_name,
+        )
+
+        filled_order = self._broker.submit_order(order)
+
+        if filled_order.is_filled:
+            exit_price = filled_order.filled_price or signal.price
+            result = self._risk_manager.close_position(
+                signal.symbol, exit_price, reason="signal"
+            )
+            self._audit.log_trade(
+                trade_id=filled_order.order_id,
+                symbol=signal.symbol,
+                side=OrderSide.SELL.value,
+                quantity=pos.quantity,
+                price=exit_price,
+                strategy=signal.strategy_name,
+                details={"pnl": result.get("pnl", 0), "reason": "signal"},
+            )
+            self._event_bus.publish_sync(
+                Event(
+                    type=EventType.POSITION_CLOSED,
+                    data={"order_id": filled_order.order_id, "symbol": signal.symbol, "pnl": result.get("pnl", 0)},
                     source=signal.strategy_name,
                 )
             )

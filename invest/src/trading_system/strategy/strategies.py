@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+from trading_system.analysis.indicators import calculate_atr, calculate_rsi
 from trading_system.strategy.base import MarketState, Signal, SignalType, StrategyBase
 from trading_system.strategy.north_flow import NorthFlowStrategy
 from trading_system.strategy.sector_rotation import SectorRotationStrategy
@@ -33,7 +34,7 @@ class TrendFollowingStrategy(StrategyBase):
 
         df["sma_fast"] = df["close"].rolling(window=fast).mean()
         df["sma_slow"] = df["close"].rolling(window=slow).mean()
-        df["atr"] = self._calculate_atr(df, atr_period)
+        df["atr"] = calculate_atr(df, atr_period)
         df["vol_sma"] = df["volume"].rolling(window=fast).mean()
 
         signals = []
@@ -122,17 +123,6 @@ class TrendFollowingStrategy(StrategyBase):
             "suitable_markets": [MarketState.BULL.value, MarketState.BEAR.value],
         }
 
-    @staticmethod
-    def _calculate_atr(df: pd.DataFrame, period: int) -> pd.Series:
-        high = df["high"]
-        low = df["low"]
-        close = df["close"]
-        tr1 = high - low
-        tr2 = abs(high - close.shift(1))
-        tr3 = abs(low - close.shift(1))
-        tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-        return tr.rolling(window=period).mean()
-
 
 class MeanReversionStrategy(StrategyBase):
     def __init__(self, params: dict | None = None):
@@ -162,7 +152,7 @@ class MeanReversionStrategy(StrategyBase):
         df["std"] = df["close"].rolling(window=period).std()
         df["upper_band"] = df["sma"] + df["std"] * bb_std
         df["lower_band"] = df["sma"] - df["std"] * bb_std
-        df["rsi"] = self._calculate_rsi(df["close"], rsi_period)
+        df["rsi"] = calculate_rsi(df["close"], rsi_period)
 
         signals = []
         for i in range(period + 1, len(df)):
@@ -231,16 +221,6 @@ class MeanReversionStrategy(StrategyBase):
             "suitable_markets": [MarketState.RANGE.value],
         }
 
-    @staticmethod
-    def _calculate_rsi(close: pd.Series, period: int) -> pd.Series:
-        delta = close.diff()
-        gain = delta.where(delta > 0, 0.0)
-        loss = -delta.where(delta < 0, 0.0)
-        avg_gain = gain.rolling(window=period).mean()
-        avg_loss = loss.rolling(window=period).mean()
-        rs = avg_gain / avg_loss.replace(0, np.inf)
-        return 100 - (100 / (1 + rs))
-
 
 class BreakoutStrategy(StrategyBase):
     def __init__(self, params: dict | None = None):
@@ -267,7 +247,7 @@ class BreakoutStrategy(StrategyBase):
 
         df["highest"] = df["high"].rolling(window=period).max()
         df["lowest"] = df["low"].rolling(window=period).min()
-        df["atr"] = TrendFollowingStrategy._calculate_atr(df, atr_period)
+        df["atr"] = calculate_atr(df, atr_period)
         df["vol_sma"] = df["volume"].rolling(window=period).mean()
 
         signals = []

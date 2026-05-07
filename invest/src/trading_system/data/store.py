@@ -221,6 +221,51 @@ class DataStore:
     def _save_cache(self, key: str, df: pd.DataFrame) -> None:
         self._save_cache_with_meta(key, df)
 
+    def fetch_daily_volume(self, symbol: str, days: int = 20, source: str = "akshare") -> float:
+        cache_key = f"daily_{source}_{symbol}_volume_{days}"
+        cached, meta = self._load_cache_with_meta(cache_key)
+        if cached is not None and not self._is_expired(meta, CACHE_TTL_DAILY):
+            logger.debug("Volume cache hit for %s", cache_key)
+            if "volume" in cached.columns and not cached.empty:
+                return float(cached["volume"].tail(days).mean())
+
+        df = self.fetch_daily(symbol, source=source, use_cache=True)
+        if df.empty or "volume" not in df.columns:
+            logger.warning("No volume data for %s, returning 0", symbol)
+            return 0.0
+
+        avg_volume = float(df["volume"].tail(days).mean())
+        self._save_cache_with_meta(cache_key, df.tail(days))
+        return avg_volume
+
+    def fetch_intraday(
+        self,
+        symbol: str,
+        period: str = "30",
+        days_back: int = 20,
+        source: str = "akshare",
+    ) -> "pd.DataFrame":
+        import pandas as pd
+
+        cache_key = f"intraday_{source}_{symbol}_{period}_{days_back}"
+        cached, meta = self._load_cache_with_meta(cache_key)
+        cache_ttl = timedelta(minutes=5)
+        if cached is not None and not self._is_expired(meta, cache_ttl):
+            logger.debug("Intraday cache hit for %s", cache_key)
+            return cached
+
+        ds = self.get_source(source)
+        if hasattr(ds, "fetch_intraday"):
+            df = ds.fetch_intraday(symbol, period=period, days_back=days_back)
+        else:
+            logger.warning("Source %s does not support intraday data", source)
+            df = pd.DataFrame()
+
+        if not df.empty:
+            self._save_cache_with_meta(cache_key, df)
+
+        return df
+
     def clear_cache(self, older_than_days: Optional[int] = None) -> int:
         count = 0
         for f in list(self._cache_dir.glob("*.parquet")) + list(

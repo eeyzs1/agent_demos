@@ -7,16 +7,31 @@ from rich.table import Table
 
 from trading_system.analysis.market import MarketAnalyzer
 from trading_system.backtest.engine import BacktestEngine
+from trading_system.backtest.montecarlo import ProbabilisticBacktestEngine
 from trading_system.backtest.report import display_backtest_result
+from trading_system.backtest.significance import StrategySignificanceTester
 from trading_system.core.config import AppConfig
 from trading_system.core.logging_config import setup_logging
+from trading_system.data.intraday import VolumeProfile
 from trading_system.data.store import DataStore
 from trading_system.data.watchlist import WatchlistManager
 from trading_system.execution.engine import TradingEngine
+from trading_system.execution.impact import MarketImpactModel
+from trading_system.execution.scheduler import ExecutionScheduler
+from trading_system.execution.tca import TransactionCostAnalyzer
+from trading_system.ml.hmm_regime import HMMRegimeDetector
+from trading_system.ml.kalman_filter import KalmanHedgeRatio
+from trading_system.ml.microstructure import OrderBookSignalExtractor
+from trading_system.ml.volatility import VolatilityForecaster
+from trading_system.portfolio.covariance import CovarianceEstimator
+from trading_system.portfolio.factor_model import FactorModel
+from trading_system.portfolio.optimizer import PortfolioOptimizer
+from trading_system.portfolio.risk_parity import HRPOptimizer, RiskParityOptimizer
 from trading_system.research.engine import ResearchEngine
 from trading_system.research.sources import ResearchDataAggregator
 from trading_system.sentiment.analyzer import MarketSentimentAnalyzer, SentimentLevel
 from trading_system.sentiment.hotspot import HotSpotDetector
+from trading_system.strategy.pairs_trading import PairsRegistry, PairsTradingStrategy
 from trading_system.strategy.strategies import STRATEGY_REGISTRY, create_strategy, list_strategies
 
 console = Console()
@@ -137,6 +152,48 @@ def analyze_data(ctx, symbol, source):
 
     except Exception as e:
         console.print(f"[red]分析失败: {e}[/red]")
+
+
+@data.command("intraday")
+@click.argument("symbol")
+@click.option("--period", "-p", default="30min", help="K线周期 (5/15/30/60)")
+@click.option("--days", "-d", default=5, help="获取天数")
+@click.pass_context
+def fetch_intraday_data(ctx, symbol, period, days):
+    """获取日内K线数据"""
+    config = ctx.obj["config"]
+    store = DataStore(cache_dir=config.data.cache_dir, db_url=config.data.database_url)
+
+    console.print(f"[cyan]正在获取 {symbol} {period} K线数据...[/cyan]")
+    try:
+        df = store.fetch_intraday(symbol, period=period.replace("min", ""), days_back=days)
+        if df.empty:
+            console.print("[red]未获取到数据[/red]")
+            return
+
+        console.print(f"[green]成功获取 {len(df)} 条记录[/green]")
+
+        table = Table(title=f"{symbol} {period} K线 (最近{len(df.tail(20))}条)")
+        table.add_column("时间", style="cyan")
+        table.add_column("开盘", style="white")
+        table.add_column("收盘", style="yellow")
+        table.add_column("最高", style="green")
+        table.add_column("最低", style="red")
+        table.add_column("成交量", style="white")
+
+        for idx, row in df.tail(20).iterrows():
+            table.add_row(
+                str(idx)[:19],
+                f"{row.get('open', 0):.2f}",
+                f"{row.get('close', 0):.2f}",
+                f"{row.get('high', 0):.2f}",
+                f"{row.get('low', 0):.2f}",
+                f"{row.get('volume', 0):,.0f}",
+            )
+        console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]获取日内数据失败: {e}[/red]")
 
 
 @cli.group()
@@ -420,6 +477,7 @@ def detect_hotspots(ctx, top):
 
 @sentiment.command("persistence")
 @click.argument("spot_name")
+@click.pass_context
 def check_persistence(ctx, spot_name):
     """分析热点持续性"""
     console.print(f"[cyan]正在分析 '{spot_name}' 的持续性...[/cyan]")
@@ -617,9 +675,7 @@ def trade_status(ctx):
 
 
 @trade.command("start")
-@click.option(
-    "--mode", "-m", type=click.Choice(["paper", "live"]), default="paper", help="交易模式"
-)
+@click.option("--mode", "-m", type=click.Choice(["paper", "live"]), default="paper", help="交易模式")
 @click.pass_context
 def start_trading(ctx, mode):
     """启动交易引擎"""
@@ -689,6 +745,743 @@ def recommend_stocks(ctx, top, output):
         console.print(f"[cyan]报告路径: {output}[/cyan]")
     except Exception as e:
         console.print(f"[red]推荐报告生成失败: {e}[/red]")
+
+
+@trade.command("estimate-impact")
+@click.option("--symbol", "-s", required=True, help="股票代码")
+@click.option("--quantity", "-q", type=int, required=True, help="订单数量")
+@click.option("--price", "-p", type=float, default=None, help="到达价格（默认用最新价）")
+@click.pass_context
+def estimate_impact(ctx, symbol, quantity, price):
+    """估算市场冲击成本"""
+    config = ctx.obj["config"]
+    store = DataStore(cache_dir=config.data.cache_dir, db_url=config.data.database_url)
+
+    try:
+        impact_model = MarketImpactModel()
+
+        daily_volume = store.fetch_daily_volume(symbol, days=20)
+
+        df = store.fetch_daily(symbol, source="akshare", use_cache=True)
+        if df.empty:
+            console.print("[red]未获取到数据[/red]")
+            return
+
+        if price is None:
+            price = float(df["close"].iloc[-1])
+
+        returns = df["close"].pct_change().dropna()
+        daily_volatility = float(returns.std())
+
+        impact = impact_model.estimate_impact(
+            symbol=symbol,
+            order_quantity=quantity,
+            order_side="BUY",
+            arrival_price=price,
+            daily_volume=daily_volume,
+            daily_volatility=daily_volatility,
+        )
+
+        console.print(
+            Panel.fit(
+                f"[bold]股票:[/bold] {impact.symbol}\n"
+                f"[bold]订单量:[/bold] {impact.order_quantity:,} 股\n"
+                f"[bold]到达价格:[/bold] {impact.arrival_price:.4f}\n"
+                f"[bold]日均成交量:[/bold] {impact.daily_volume:,.0f}\n"
+                f"[bold]日波动率:[/bold] {impact.daily_volatility:.4f}\n"
+                f"[bold]临时冲击:[/bold] {impact.temporary_impact_bps} bps\n"
+                f"[bold]永久冲击:[/bold] {impact.permanent_impact_bps} bps\n"
+                f"[bold]总冲击:[/bold] {impact.total_impact_bps} bps\n"
+                f"[bold]预期成交价:[/bold] {impact.expected_slippage_price:.4f}",
+                title="📊 市场冲击成本估算",
+                border_style="cyan",
+            )
+        )
+    except Exception as e:
+        console.print(f"[red]估算失败: {e}[/red]")
+
+
+@trade.command("execution-plan")
+@click.option("--symbol", "-s", required=True, help="股票代码")
+@click.option("--quantity", "-q", type=int, required=True, help="总订单数量")
+@click.option("--strategy", "-st", default="vwap", help="执行策略 (twap/vwap/implementation_shortfall)")
+@click.option("--minutes", "-m", default=30, help="执行时间（分钟）")
+@click.option("--slices", "-n", default=10, help="子单数量")
+@click.pass_context
+def execution_plan(ctx, symbol, quantity, strategy, minutes, slices):
+    """生成执行计划"""
+    config = ctx.obj["config"]
+    store = DataStore(cache_dir=config.data.cache_dir, db_url=config.data.database_url)
+
+    try:
+        impact_model = MarketImpactModel()
+        scheduler = ExecutionScheduler(impact_model=impact_model)
+
+        volume_profile_obj = VolumeProfile()
+        profile = volume_profile_obj.get_profile(slices)
+
+        schedule = scheduler.generate_schedule(
+            symbol=symbol,
+            total_quantity=quantity,
+            strategy=strategy,
+            total_minutes=minutes,
+            num_slices=slices,
+            volume_profile=profile,
+        )
+
+        console.print(
+            Panel.fit(
+                f"[bold]策略:[/bold] {schedule.strategy}\n"
+                f"[bold]总订单量:[/bold] {schedule.total_quantity:,}\n"
+                f"[bold]子单数:[/bold] {schedule.num_slices}\n"
+                f"[bold]预期均价:[/bold] {schedule.expected_avg_price:.4f}\n"
+                f"[bold]预期冲击:[/bold] {schedule.expected_impact_bps} bps",
+                title="📋 执行计划",
+                border_style="cyan",
+            )
+        )
+
+        table = Table(title="子单明细")
+        table.add_column("#", style="white", width=4)
+        table.add_column("时间偏移(min)", style="cyan")
+        table.add_column("数量", style="green")
+
+        for slc in schedule.slices:
+            table.add_row(
+                str(slc.slice_index + 1),
+                f"{slc.time_offset_minutes:.1f}",
+                f"{slc.quantity:,}",
+            )
+        console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]生成执行计划失败: {e}[/red]")
+
+
+@trade.command("tca-report")
+@click.option("--period", "-p", default="this_week", help="报告周期")
+@click.pass_context
+def tca_report(ctx, period):
+    """输出TCA报告"""
+    try:
+        analyzer = TransactionCostAnalyzer()
+
+        report = analyzer.generate_weekly_report()
+
+        console.print(
+            Panel.fit(
+                f"[bold]周期:[/bold] {report.period_start} ~ {report.period_end}\n"
+                f"[bold]订单数:[/bold] {len(report.records)}\n"
+                f"[bold]平均执行成本:[/bold] {report.avg_execution_cost_bps:.2f} bps",
+                title="📊 TCA 周度报告",
+                border_style="cyan",
+            )
+        )
+
+        percentiles = report.cost_percentiles()
+        console.print(
+            f"[bold]成本分布:[/bold] "
+            f"P25={percentiles['P25']}bps P50={percentiles['P50']}bps "
+            f"P75={percentiles['P75']}bps P95={percentiles['P95']}bps"
+        )
+
+        if report.by_symbol:
+            table = Table(title="按股票统计")
+            table.add_column("股票", style="cyan")
+            table.add_column("订单数", style="white")
+            table.add_column("平均成本(bps)", style="yellow")
+            table.add_column("总股数", style="green")
+
+            for sym, data in report.by_symbol.items():
+                table.add_row(
+                    sym,
+                    str(data["count"]),
+                    f"{data['avg_cost_bps']:.2f}",
+                    f"{data['total_quantity']:,.0f}",
+                )
+            console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]TCA报告生成失败: {e}[/red]")
+
+
+@trade.command("tca-order")
+@click.option("--order-id", "-o", required=True, help="订单ID")
+@click.pass_context
+def tca_order(ctx, order_id):
+    """查看单笔订单TCA明细"""
+    try:
+        analyzer = TransactionCostAnalyzer()
+        record = analyzer.get_order_tca(order_id)
+
+        if record is None:
+            console.print(f"[yellow]未找到订单: {order_id}[/yellow]")
+            return
+
+        console.print(
+            Panel.fit(
+                f"[bold]订单ID:[/bold] {record.order_id}\n"
+                f"[bold]股票:[/bold] {record.symbol}\n"
+                f"[bold]方向:[/bold] {record.side}\n"
+                f"[bold]数量:[/bold] {record.quantity:,.0f}\n"
+                f"[bold]到达价:[/bold] {record.arrival_price:.4f}\n"
+                f"[bold]成交均价:[/bold] {record.execution_avg_price:.4f}\n"
+                f"[bold]VWAP:[/bold] {record.vwap:.4f}\n"
+                f"[bold]IS (bps):[/bold] {record.is_bps}\n"
+                f"[bold]延迟成本 (bps):[/bold] {record.delay_bps}\n"
+                f"[bold]冲击成本 (bps):[/bold] {record.impact_bps}",
+                title=f"📋 TCA 明细 - {order_id}",
+                border_style="cyan",
+            )
+        )
+
+    except Exception as e:
+        console.print(f"[red]TCA查询失败: {e}[/red]")
+
+
+@trade.command("covariance")
+@click.option("--symbols", "-s", required=True, help="股票代码（逗号分隔）")
+@click.option("--method", "-m", default="ledoit_wolf", help="方法 (sample/exponential/ledoit_wolf)")
+@click.pass_context
+def calc_covariance(ctx, symbols, method):
+    """计算协方差矩阵和相关性矩阵"""
+    config = ctx.obj["config"]
+    store = DataStore(cache_dir=config.data.cache_dir, db_url=config.data.database_url)
+    symbols_list = [s.strip() for s in symbols.split(",")]
+
+    try:
+        returns_data = {}
+        for sym in symbols_list:
+            df = store.fetch_daily(sym, source="akshare", use_cache=True)
+            if "close" in df.columns:
+                returns_data[sym] = df["close"].pct_change().dropna()
+
+        returns_df = pd.DataFrame(returns_data).dropna()
+        if returns_df.empty:
+            console.print("[red]未获取到有效数据[/red]")
+            return
+
+        import pandas as pd
+
+        estimator = CovarianceEstimator()
+        result = estimator.estimate(returns_df, method=method)
+
+        console.print(
+            Panel.fit(
+                f"[bold]方法:[/bold] {result.method}\n"
+                f"[bold]收缩强度:[/bold] {result.shrinkage_intensity:.4f}\n"
+                f"[bold]正定性:[/bold] {'✓' if result.is_positive_definite else '✗'}",
+                title="📊 协方差矩阵估计",
+                border_style="cyan",
+            )
+        )
+
+        table = Table(title="相关性矩阵")
+        table.add_column("", style="white")
+        for sym in symbols_list:
+            table.add_column(sym, style="cyan")
+
+        for sym_i in symbols_list:
+            row = [sym_i]
+            for sym_j in symbols_list:
+                val = result.correlation_matrix.loc[sym_i, sym_j]
+                color = "green" if val > 0.7 else "red" if val < -0.7 else "white"
+                row.append(f"[{color}]{val:.3f}[/{color}]")
+            table.add_row(*row)
+
+        console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]协方差计算失败: {e}[/red]")
+
+
+@trade.command("optimize-portfolio")
+@click.option("--symbols", "-s", required=True, help="股票代码（逗号分隔）")
+@click.option("--method", "-m", default="markowitz", help="方法 (markowitz/risk_parity/hrp)")
+@click.pass_context
+def optimize_portfolio(ctx, symbols, method):
+    """组合优化"""
+    config = ctx.obj["config"]
+    store = DataStore(cache_dir=config.data.cache_dir, db_url=config.data.database_url)
+    symbols_list = [s.strip() for s in symbols.split(",")]
+
+    try:
+        returns_data = {}
+        close_prices = {}
+        for sym in symbols_list:
+            df = store.fetch_daily(sym, source="akshare", use_cache=True)
+            if "close" in df.columns:
+                returns_data[sym] = df["close"].pct_change().dropna()
+                close_prices[sym] = df["close"].iloc[-1]
+
+        returns_df = pd.DataFrame(returns_data).dropna()
+        if returns_df.empty:
+            console.print("[red]未获取到有效数据[/red]")
+            return
+
+        import pandas as pd
+
+        estimator = CovarianceEstimator()
+        cov_result = estimator.estimate(returns_df)
+
+        if method == "markowitz":
+            expected_returns = {sym: float(returns_df[sym].mean() * 252) for sym in symbols_list}
+            optimizer = PortfolioOptimizer()
+            allocation = optimizer.optimize(expected_returns, cov_result.covariance_matrix)
+        elif method == "risk_parity":
+            optimizer = RiskParityOptimizer()
+            allocation = optimizer.optimize(cov_result.covariance_matrix)
+        elif method == "hrp":
+            optimizer = HRPOptimizer()
+            allocation = optimizer.optimize(cov_result.covariance_matrix)
+        else:
+            console.print(f"[red]未知方法: {method}[/red]")
+            return
+
+        console.print(
+            Panel.fit(
+                f"[bold]方法:[/bold] {allocation.method}\n"
+                f"[bold]预期年化收益:[/bold] {allocation.expected_portfolio_return:.4%}\n"
+                f"[bold]预期年化波动:[/bold] {allocation.expected_portfolio_volatility:.4%}\n"
+                f"[bold]夏普比率:[/bold] {allocation.sharpe_ratio:.4f}\n"
+                f"[bold]分散化比率:[/bold] {allocation.diversification_ratio:.2f}",
+                title="📊 组合优化结果",
+                border_style="cyan",
+            )
+        )
+
+        table = Table(title="最优权重")
+        table.add_column("股票", style="cyan")
+        table.add_column("权重", style="green")
+        table.add_column("配置", style="yellow")
+
+        for sym, w in sorted(allocation.weights.items(), key=lambda x: -x[1]):
+            bar_len = int(w * 40)
+            bar = "█" * bar_len
+            table.add_row(sym, f"{w:.4f}", f"[green]{bar}[/green]")
+
+        console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]组合优化失败: {e}[/red]")
+
+
+@trade.command("factor-exposure")
+@click.option("--symbols", "-s", required=True, help="股票代码（逗号分隔）")
+@click.pass_context
+def factor_exposure_cmd(ctx, symbols):
+    """输出因子暴露"""
+    config = ctx.obj["config"]
+    store = DataStore(cache_dir=config.data.cache_dir, db_url=config.data.database_url)
+    symbols_list = [s.strip() for s in symbols.split(",")]
+
+    try:
+        returns_data = {}
+        for sym in symbols_list:
+            df = store.fetch_daily(sym, source="akshare", use_cache=True)
+            if "close" in df.columns:
+                returns_data[sym] = df["close"].pct_change().dropna()
+
+        returns_df = pd.DataFrame(returns_data).dropna()
+        if returns_df.empty:
+            console.print("[red]未获取到有效数据[/red]")
+            return
+
+        import pandas as pd
+
+        model = FactorModel()
+        model.fit(returns_df)
+
+        equal_weights = {sym: 1.0 / len(symbols_list) for sym in symbols_list}
+        exposure = model.get_factor_exposures(equal_weights, returns_df)
+
+        console.print(
+            Panel.fit(
+                f"[bold]总年化收益:[/bold] {exposure.total_return:.4%}\n"
+                f"[bold]特质收益 (Alpha):[/bold] {exposure.specific_return:.4%}\n"
+                f"[bold]Alpha占比:[/bold] {exposure.alpha_pct:.1f}%",
+                title="📊 因子暴露分析",
+                border_style="cyan",
+            )
+        )
+
+        table = Table(title="因子贡献")
+        table.add_column("因子", style="cyan")
+        table.add_column("暴露", style="white")
+        table.add_column("因子收益(年化)", style="yellow")
+        table.add_column("贡献收益(年化)", style="green")
+
+        for name, data in exposure.factor_exposures.items():
+            table.add_row(
+                name,
+                f"{data['exposure']:.4f}",
+                f"{data['factor_return_annualized']:.4%}",
+                f"{data['contribution_annualized']:.4%}",
+            )
+        console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]因子暴露分析失败: {e}[/red]")
+
+
+@trade.command("find-pairs")
+@click.option("--pool", "-p", default="hs300", help="股票池")
+@click.option("--symbols", "-s", default=None, help="自定义股票代码（逗号分隔）")
+@click.pass_context
+def find_pairs(ctx, pool, symbols):
+    """发现协整配对"""
+    config = ctx.obj["config"]
+    store = DataStore(cache_dir=config.data.cache_dir, db_url=config.data.database_url)
+
+    try:
+        if symbols:
+            symbols_list = [s.strip() for s in symbols.split(",")]
+        else:
+            symbols_list = ["000001", "000858", "600519", "600036", "601318",
+                           "000333", "600276", "300750", "000651", "002415"]
+
+        console.print(f"[cyan]正在扫描 {len(symbols_list)} 只股票的协整关系...[/cyan]")
+
+        price_data = {}
+        for sym in symbols_list:
+            df = store.fetch_daily(sym, source="akshare", use_cache=True)
+            if not df.empty:
+                price_data[sym] = df
+
+        strategy = PairsTradingStrategy()
+        pairs = strategy.discover_pairs(price_data, symbols_list)
+
+        if not pairs:
+            console.print("[yellow]未发现协整配对[/yellow]")
+            return
+
+        console.print(f"[green]发现 {len(pairs)} 个协整配对[/green]")
+
+        table = Table(title="协整配对")
+        table.add_column("股票Y", style="cyan")
+        table.add_column("股票X", style="cyan")
+        table.add_column("对冲比率", style="white")
+        table.add_column("ADF t-stat", style="yellow")
+        table.add_column("p-value", style="red")
+        table.add_column("相关性", style="green")
+
+        for pair in pairs:
+            table.add_row(
+                pair.symbol_y, pair.symbol_x,
+                f"{pair.hedge_ratio:.4f}",
+                f"{pair.adf_t_stat:.2f}",
+                f"{pair.p_value:.4f}",
+                f"{pair.correlation:.4f}",
+            )
+        console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]配对发现失败: {e}[/red]")
+
+
+@trade.command("hmm-state")
+@click.option("--symbol", "-s", default="000300", help="指数代码")
+@click.pass_context
+def hmm_state(ctx, symbol):
+    """HMM市场状态识别"""
+    config = ctx.obj["config"]
+    store = DataStore(cache_dir=config.data.cache_dir, db_url=config.data.database_url)
+
+    try:
+        df = store.fetch_daily(symbol, source="akshare", use_cache=True)
+        if df.empty:
+            console.print("[red]未获取到数据[/red]")
+            return
+
+        detector = HMMRegimeDetector()
+        features = detector.prepare_features(df)
+
+        trained = detector.load_model() or detector.fit(features)
+
+        if not trained:
+            console.print("[red]HMM训练失败[/red]")
+            return
+
+        result = detector.predict_state(features)
+
+        state_colors = {0: "green", 1: "red", 2: "yellow"}
+
+        console.print(
+            Panel.fit(
+                f"[bold]当前状态:[/bold] [{state_colors.get(result.current_regime, 'white')}]{result.dominant_regime_label}[/{state_colors.get(result.current_regime, 'white')}]\n"
+                + "\n".join(
+                    f"[bold]状态{i}:[/bold] P={result.state_probabilities[i]:.3f} "
+                    f"[{state_colors.get(i, 'white')}]{result.regime_characteristics.get(i, {}).get('label', f'State_{i}')}[/{state_colors.get(i, 'white')}]"
+                    for i in range(min(3, len(result.state_probabilities)))
+                ),
+                title="🤖 HMM 市场状态",
+                border_style="cyan",
+            )
+        )
+
+        if result.regime_characteristics:
+            table = Table(title="状态特征")
+            table.add_column("状态", style="cyan")
+            table.add_column("标签", style="white")
+            table.add_column("平均20日收益", style="yellow")
+            table.add_column("平均20日波动", style="red")
+            table.add_column("频率", style="green")
+
+            for state, chars in result.regime_characteristics.items():
+                table.add_row(
+                    f"State_{state}",
+                    chars["label"],
+                    f"{chars['avg_20d_return']:.4%}",
+                    f"{chars['avg_20d_volatility']:.4%}",
+                    f"{chars['frequency']:.2%}",
+                )
+            console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]HMM分析失败: {e}[/red]")
+
+
+@trade.command("kalman-hedge")
+@click.option("--pair", "-p", required=True, help="配对代码 (如000001-000858)")
+@click.pass_context
+def kalman_hedge(ctx, pair):
+    """卡尔曼滤波动态对冲比率"""
+    config = ctx.obj["config"]
+    store = DataStore(cache_dir=config.data.cache_dir, db_url=config.data.database_url)
+
+    try:
+        parts = pair.split("-")
+        if len(parts) != 2:
+            console.print("[red]配对格式错误，应为 SYMBOL1-SYMBOL2[/red]")
+            return
+
+        sym_y, sym_x = parts
+
+        df_y = store.fetch_daily(sym_y, source="akshare", use_cache=True)
+        df_x = store.fetch_daily(sym_x, source="akshare", use_cache=True)
+
+        if df_y.empty or df_x.empty:
+            console.print("[red]未获取到数据[/red]")
+            return
+
+        y_close = df_y["close"].values
+        x_close = df_x["close"].values
+        min_len = min(len(y_close), len(x_close))
+        y_close = y_close[-min_len:]
+        x_close = x_close[-min_len:]
+
+        kf = KalmanHedgeRatio()
+        estimates = []
+        for i in range(len(y_close)):
+            est = kf.update(float(y_close[i]), float(x_close[i]))
+            estimates.append(est)
+
+        ols_hedge = float(np.polyfit(x_close, y_close, 1)[0])
+
+        console.print(
+            Panel.fit(
+                f"[bold]配对:[/bold] {sym_y}-{sym_x}\n"
+                f"[bold]OLS对冲比率:[/bold] {ols_hedge:.6f}\n"
+                f"[bold]卡尔曼最终β:[/bold] {kf.beta:.6f}\n"
+                f"[bold]β标准差:[/bold] {kf.beta_std:.6f}\n"
+                f"[bold]更新次数:[/bold] {kf.n_updates}",
+                title="📈 卡尔曼滤波对冲比率",
+                border_style="cyan",
+            )
+        )
+
+    except Exception as e:
+        console.print(f"[red]卡尔曼滤波失败: {e}[/red]")
+
+
+@trade.command("vol-forecast")
+@click.option("--symbol", "-s", required=True, help="股票代码")
+@click.option("--method", "-m", default="ewma", help="方法 (ewma/garch)")
+@click.pass_context
+def vol_forecast(ctx, symbol, method):
+    """波动率预测"""
+    config = ctx.obj["config"]
+    store = DataStore(cache_dir=config.data.cache_dir, db_url=config.data.database_url)
+
+    try:
+        df = store.fetch_daily(symbol, source="akshare", use_cache=True)
+        if df.empty:
+            console.print("[red]未获取到数据[/red]")
+            return
+
+        returns = df["close"].pct_change().dropna()
+
+        forecaster = VolatilityForecaster()
+        forecast = forecaster.forecast(returns, method=method, horizon=5)
+
+        console.print(
+            Panel.fit(
+                f"[bold]方法:[/bold] {forecast['method']}\n"
+                f"[bold]当前日波动率:[/bold] {forecast['current_daily_vol']:.4%}\n"
+                + "\n".join(
+                    f"[bold]预测 Day {i}:[/bold] {forecast[f'forecast_vol_{i}d']:.4%}"
+                    for i in range(1, 6) if f"forecast_vol_{i}d" in forecast
+                ),
+                title=f"📈 {symbol} 波动率预测",
+                border_style="cyan",
+            )
+        )
+
+    except Exception as e:
+        console.print(f"[red]波动率预测失败: {e}[/red]")
+
+
+@trade.command("tick-analysis")
+@click.option("--symbol", "-s", required=True, help="股票代码")
+@click.pass_context
+def tick_analysis(ctx, symbol):
+    """tick数据分析"""
+    try:
+        import akshare as ak
+        import pandas as pd
+
+        console.print(f"[cyan]正在获取 {symbol} tick数据...[/cyan]")
+
+        try:
+            tick_df = ak.stock_zh_a_tick_tx(symbol=symbol)
+        except Exception:
+            try:
+                tick_df = ak.stock_zh_a_tick_js(code=symbol)
+            except Exception:
+                console.print("[red]无法获取tick数据[/red]")
+                return
+
+        if tick_df.empty:
+            console.print("[red]未获取到tick数据[/red]")
+            return
+
+        extractor = OrderBookSignalExtractor()
+        signal = extractor.extract(tick_df)
+
+        score_color = "green" if signal["composite_score"] > 0.2 else "red" if signal["composite_score"] < -0.2 else "yellow"
+
+        console.print(
+            Panel.fit(
+                f"[bold]成交量不平衡:[/bold] {signal['volume_imbalance']:.4f}\n"
+                f"[bold]单笔大小不平衡:[/bold] {signal['trade_size_imbalance']:.4f}\n"
+                f"[bold]Tick方向:[/bold] {signal['tick_direction']:.4f}\n"
+                f"[bold]综合评分:[/bold] [{score_color}]{signal['composite_score']:.4f}[/{score_color}]\n"
+                f"[bold]买方成交量:[/bold] {signal['buy_volume']:,.0f}\n"
+                f"[bold]卖方成交量:[/bold] {signal['sell_volume']:,.0f}",
+                title=f"📊 {symbol} Tick 分析",
+                border_style="cyan",
+            )
+        )
+
+    except Exception as e:
+        console.print(f"[red]tick分析失败: {e}[/red]")
+
+
+@trade.command("test-significance")
+@click.option("--strategy", "-s", required=True, help="策略名称")
+@click.option("--symbol", "-y", default="000001", help="股票代码")
+@click.option("--n-trials", "-n", type=int, default=50, help="尝试的参数组合数")
+@click.pass_context
+def test_significance(ctx, strategy, symbol, n_trials):
+    """测试策略统计显著性"""
+    config = ctx.obj["config"]
+    store = DataStore(cache_dir=config.data.cache_dir, db_url=config.data.database_url)
+
+    try:
+        if strategy not in STRATEGY_REGISTRY:
+            console.print(f"[red]未知策略: {strategy}[/red]")
+            return
+
+        df = store.fetch_daily(symbol, source="akshare", use_cache=True)
+        if df.empty:
+            console.print("[red]未获取到数据[/red]")
+            return
+
+        strat = create_strategy(strategy)
+        engine = BacktestEngine(strategy=strat, initial_capital=100000, risk_config=config.risk)
+        result = engine.run(df, symbol=symbol)
+
+        import pandas as pd
+        returns = pd.Series(result.equity_curve).pct_change().dropna()
+
+        tester = StrategySignificanceTester(n_simulations=2000)
+        sig_report = tester.test(strategy_returns=returns.values, n_trials=n_trials)
+
+        level_colors = {
+            "HIGHLY SIGNIFICANT": "bold green",
+            "SIGNIFICANT": "green",
+            "WEAK": "yellow",
+            "NOT SIGNIFICANT": "red",
+        }
+
+        console.print(
+            Panel.fit(
+                f"[bold]原始Sharpe:[/bold] {sig_report.sharpe_ratio:.4f}\n"
+                f"[bold]Deflated Sharpe:[/bold] {sig_report.deflated_sharpe:.4f}\n"
+                f"[bold]Haircut Sharpe:[/bold] {sig_report.haircut_sharpe:.4f}\n"
+                f"[bold]月度Alpha t-stat:[/bold] {sig_report.monthly_alpha_t_stat:.4f}\n"
+                f"[bold]显著性:[/bold] [{level_colors.get(sig_report.significance_level, 'white')}]{sig_report.significance_level}[/{level_colors.get(sig_report.significance_level, 'white')}]\n"
+                f"[bold]尝试次数:[/bold] {sig_report.n_trials}\n"
+                f"[bold]Monte Carlo模拟:[/bold] {sig_report.n_simulations}",
+                title="🔬 策略显著性检验",
+                border_style="cyan",
+            )
+        )
+
+    except Exception as e:
+        console.print(f"[red]显著性检验失败: {e}[/red]")
+
+
+@trade.command("backtest-mc")
+@click.option("--symbol", "-s", default="000001", help="股票代码")
+@click.option("--strategy", "-st", default="trend_following", help="策略名称")
+@click.option("--n-paths", "-n", type=int, default=500, help="Monte Carlo路径数")
+@click.pass_context
+def backtest_mc(ctx, symbol, strategy, n_paths):
+    """Monte Carlo概率回测"""
+    config = ctx.obj["config"]
+    store = DataStore(cache_dir=config.data.cache_dir, db_url=config.data.database_url)
+
+    try:
+        if strategy not in STRATEGY_REGISTRY:
+            console.print(f"[red]未知策略: {strategy}[/red]")
+            return
+
+        df = store.fetch_daily(symbol, source="akshare", use_cache=True)
+        if df.empty:
+            console.print("[red]未获取到数据[/red]")
+            return
+
+        strat = create_strategy(strategy)
+        engine = BacktestEngine(strategy=strat, initial_capital=100000, risk_config=config.risk)
+
+        console.print(f"[cyan]正在运行 {n_paths} 路径 Monte Carlo 回测...[/cyan]")
+
+        prob_engine = ProbabilisticBacktestEngine(engine=engine, n_paths=n_paths)
+        mc_result = prob_engine.run_probabilistic_montecarlo(data=df, symbol=symbol)
+
+        console.print(
+            Panel.fit(
+                f"[bold]路径数:[/bold] {mc_result.n_paths}\n"
+                f"[bold]最终权益中位数:[/bold] {mc_result.final_equity_distribution['P50']:,.2f}\n"
+                f"[bold]亏损概率:[/bold] {mc_result.prob_of_loss:.2%}\n"
+                f"[bold]预期夏普:[/bold] {mc_result.expected_sharpe:.4f}",
+                title="🎲 Monte Carlo 回测结果",
+                border_style="cyan",
+            )
+        )
+
+        table = Table(title="最终权益分布")
+        table.add_column("分位数", style="cyan")
+        table.add_column("最终权益", style="green")
+
+        for key in ["P10", "P25", "P50", "P75", "P90"]:
+            table.add_row(key, f"{mc_result.final_equity_distribution[key]:,.2f}")
+
+        console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]Monte Carlo回测失败: {e}[/red]")
 
 
 @cli.command("init")

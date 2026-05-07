@@ -42,11 +42,13 @@ trading --help
 ```
 src/trading_system/
 ├── core/          事件总线、配置管理、审计日志
-├── data/          市场数据获取(akshare/yfinance)、缓存、观察列表
-├── strategy/      策略基类 + 3个内置策略
+├── data/          市场数据获取(日线/日内)、缓存、观察列表
+├── strategy/      策略基类 + 3个内置策略 + 协整配对 + PCA套利
+├── portfolio/     协方差估计、组合优化、风险平价/HRP、因子模型
+├── ml/            HMM状态识别、卡尔曼滤波、波动率预测、微观结构信号
 ├── risk/          仓位计算、止损、最大回撤、熔断机制
-├── backtest/      回测引擎 + 7大量化指标 + Rich报告
-├── execution/     纸上交易Broker、订单管理、交易引擎
+├── backtest/      回测引擎 + Monte Carlo概率回测 + 显著性检验
+├── execution/     纸上交易Broker + 冲击成本模型 + 执行调度 + TCA
 ├── analysis/      市场状态检测(牛/熊/震荡)、技术指标
 ├── sentiment/     市场情绪分析、热点捕捉、持续性分析
 ├── research/      投研数据源(新闻/研报/公告)、投研引擎
@@ -55,23 +57,38 @@ src/trading_system/
 
 ### 命令一览
 
-| 命令组 | 命令 | 说明 |
-|--------|------|------|
-| `trading init` | — | 初始化项目目录和配置 |
-| `trading data` | `fetch` | 获取股票日线数据 |
-| `trading data` | `analyze` | 分析技术指标和市场状态 |
-| `trading watchlist` | `create` | 创建观察列表 |
-| `trading watchlist` | `add` | 添加股票到观察列表 |
-| `trading watchlist` | `list` | 列出所有观察列表 |
-| `trading strategy` | `list` | 列出可用策略 |
-| `trading strategy` | `backtest` | 回测指定策略 |
-| `trading sentiment` | `analyze` | 分析市场情绪 |
-| `trading sentiment` | `hotspot` | 捕捉市场热点 |
-| `trading sentiment` | `persistence` | 分析热点持续性 |
-| `trading research` | `symbol` | 个股投研分析 |
-| `trading research` | `market` | 全市场投研概览 |
-| `trading trade` | `status` | 查看交易系统状态 |
-| `trading trade` | `start` | 启动交易引擎 |
+| 命令组 | 命令 | 说明 | 所属阶段 |
+|--------|------|------|----------|
+| `trading init` | — | 初始化项目目录和配置 | — |
+| `trading data` | `fetch` | 获取股票日线数据 | — |
+| `trading data` | `analyze` | 分析技术指标和市场状态 | — |
+| `trading data` | `intraday` | 获取日内多频率K线数据 | Phase 4 |
+| `trading watchlist` | `create` | 创建观察列表 | — |
+| `trading watchlist` | `add` | 添加股票到观察列表 | — |
+| `trading watchlist` | `list` | 列出所有观察列表 | — |
+| `trading strategy` | `list` | 列出可用策略 | — |
+| `trading strategy` | `backtest` | 回测指定策略 | — |
+| `trading sentiment` | `analyze` | 分析市场情绪 | — |
+| `trading sentiment` | `hotspot` | 捕捉市场热点 | — |
+| `trading sentiment` | `persistence` | 分析热点持续性 | — |
+| `trading research` | `symbol` | 个股投研分析 | — |
+| `trading research` | `market` | 全市场投研概览 | — |
+| `trading trade` | `status` | 查看交易系统状态 | — |
+| `trading trade` | `start` | 启动交易引擎 | — |
+| `trading trade` | `estimate-impact` | 估算市场冲击成本 | Phase 1 |
+| `trading trade` | `execution-plan` | 生成最优执行计划(TWAP/VWAP/IS) | Phase 1 |
+| `trading trade` | `tca-report` | 交易成本分析周度报告 | Phase 1 |
+| `trading trade` | `tca-order` | 单笔订单TCA明细查询 | Phase 1 |
+| `trading trade` | `covariance` | 计算协方差与相关性矩阵 | Phase 2 |
+| `trading trade` | `optimize-portfolio` | 组合优化(Markowitz/RiskParity/HRP) | Phase 2 |
+| `trading trade` | `factor-exposure` | 因子暴露与Alpha归因分析 | Phase 2 |
+| `trading trade` | `find-pairs` | 自动发现协整配对 | Phase 3 |
+| `trading trade` | `hmm-state` | HMM市场状态识别 | Phase 3 |
+| `trading trade` | `kalman-hedge` | 卡尔曼滤波动态对冲比率 | Phase 3 |
+| `trading trade` | `vol-forecast` | 波动率预测(EWMA/GARCH) | Phase 4 |
+| `trading trade` | `tick-analysis` | Tick数据买卖压力分析 | Phase 4 |
+| `trading trade` | `test-significance` | Deflated Sharpe显著性检验 | Phase 5 |
+| `trading trade` | `backtest-mc` | Monte Carlo概率回测 | Phase 5 |
 
 ---
 
@@ -205,6 +222,296 @@ trading trade start --mode paper
 - 最大回撤超限自动触发熔断
 - 日亏损超5%触发熔断，冷却3天
 - 所有操作记录审计日志
+
+---
+
+## 🔬 Phase 1：执行 Alpha — 保护策略 Edge
+
+> **核心理念**：好的策略被糟糕的执行毁掉。执行优化的ROI远高于策略优化。
+
+### 市场冲击成本估算
+
+基于 Almgren-Chriss 框架，估算大单交易的市场冲击：
+
+```
+总冲击 = 临时冲击 + 永久冲击
+临时冲击 = η × σ × ν^β    (流动性消耗，执行后反弹)
+永久冲击 = γ × σ × ν      (信息泄露，改变均衡价格)
+```
+
+```bash
+# 估算买入50,000股贵州茅台的市场冲击
+trading trade estimate-impact -s 600519 -q 50000
+
+# 指定到达价格
+trading trade estimate-impact -s 600519 -q 50000 -p 1800.00
+```
+
+输出包括：临时冲击(bps)、永久冲击(bps)、总冲击(bps)、预期成交价格。
+
+### 最优执行计划
+
+支持三种执行策略，将大单拆分为子单，最小化执行成本：
+
+| 策略 | 原理 | 适用场景 |
+|------|------|----------|
+| `twap` | 等量拆分 | 简单场景，无市场判断 |
+| `vwap` | 按历史成交量分布拆分 | 追求与市场VWAP对齐 |
+| `implementation_shortfall` | 优化冲击-风险权衡 | 大单执行，需要控制风险 |
+
+```bash
+# VWAP执行：30分钟内10个子单执行50,000股
+trading trade execution-plan -s 600519 -q 50000 -st vwap -m 30 -n 10
+
+# TWAP等量执行
+trading trade execution-plan -s 600519 -q 20000 -st twap -m 15 -n 5
+
+# Implementation Shortfall最优执行（需先有冲击模型）
+trading trade execution-plan -s 600519 -q 100000 -st implementation_shortfall -m 60 -n 12
+```
+
+### TCA 交易成本分析
+
+监控每一笔订单的执行质量，周度汇总所有执行成本：
+
+```bash
+# 生成周度TCA报告
+trading trade tca-report
+
+# 查看单笔订单TCA明细
+trading trade tca-order -o "ORDER-001-S0"
+```
+
+**TCA指标说明**：
+- **IS (bps)**：Implementation Shortfall，总执行成本
+- **延迟成本 (bps)**：从决策到第一笔成交期间的市场变动
+- **冲击成本 (bps)**：最后一笔与第一笔成交之间的市场变动
+
+---
+
+## 📊 Phase 2：组合数学 — 风险预算与控制
+
+> **核心理念**：单票策略用止损控制风险，多票组合用数学控制风险。协方差矩阵是所有组合优化的基石。
+
+### 协方差矩阵估计
+
+稳健的协方差估计是组合优化的前提。当股票数多、样本量少时，样本协方差不稳定且可能不可逆：
+
+```bash
+# Ledoit-Wolf收缩估计（推荐，自动处理样本不足问题）
+trading trade covariance -s "600519,000858,000568,002304,000651"
+
+# 指数加权协方差（近期数据权重更高）
+trading trade covariance -s "600519,000858,000568" -m exponential
+
+# 样本协方差（样本充足时可用）
+trading trade covariance -s "600519,000858,000568" -m sample
+```
+
+输出包含相关性矩阵热力图（绿色 = 高相关，红色 = 负相关）。
+
+### 组合优化
+
+```bash
+# Markowitz均值-方差优化（需要预期收益和协方差）
+trading trade optimize-portfolio -s "600519,000858,000568,002304,000651" -m markowitz
+
+# 风险平价（所有资产贡献相等风险，不依赖收益预测）
+trading trade optimize-portfolio -s "600519,000858,000568" -m risk_parity
+
+# HRP层次风险平价（利用聚类结构，对噪声更稳健）
+trading trade optimize-portfolio -s "600519,000858,000568,002304,000651,002415" -m hrp
+```
+
+**三种方法对比**：
+
+| 方法 | 输入 | 优点 | 缺点 |
+|------|------|------|------|
+| Markowitz | 预期收益 + 协方差 | 理论最优 | 对收益率预测极度敏感 |
+| Risk Parity | 仅协方差 | 不依赖收益预测 | 可能低收益 |
+| HRP | 仅协方差 | 利用层次结构，最稳健 | 计算稍复杂 |
+
+输出包含：年化收益、年化波动、夏普比率、分散化比率、最优权重柱状图。
+
+### 因子暴露分析
+
+使用 PCA 自动提取 A 股统计因子，分解组合收益来源：
+
+```bash
+trading trade factor-exposure -s "600519,000858,000568,002304,000651"
+```
+
+输出：
+- **因子贡献表**：每个因子的暴露度、因子收益、贡献收益
+- **Alpha 占比**：不能被已知因子解释的"真 Alpha"占总收益的百分比
+- Alpha 占比 < 30% → 策略收益主要是 Beta，需要审视策略独特性
+
+---
+
+## 📈 Phase 3：统计 Alpha 发现
+
+> **核心理念**：真正的 Alpha 来自发现市场定价中的统计规律，而非主观判断。
+
+### 协整配对交易
+
+自动扫描多只股票，发现具有稳定协整关系的配对：
+
+```bash
+# 扫描默认股票池（10只大盘蓝筹）
+trading trade find-pairs
+
+# 自定义股票池
+trading trade find-pairs -s "600519,000858,000568,002304,000651,002415,000001,600036,601318,300750"
+```
+
+**工作原理**：
+1. 两两测试 Johansen 协整关系（p < 0.05）
+2. OLS 估计对冲比率 β
+3. ADF 检验价差平稳性（t-stat < -3.0）
+4. 过滤低相关性配对（|ρ| < 0.7）
+5. 每20个交易日自动 re-test，失效配对自动停用
+
+配对策略信号规则：
+- z-score > 2.0 → 做空 spread（卖 Y + 买 X）
+- z-score < -2.0 → 做多 spread（买 Y + 卖 X）
+- z-score 回归 0 附近 → 平仓
+
+### 卡尔曼滤波动态对冲比率
+
+传统 OLS 对冲比率是静态的，卡尔曼滤波提供随时间自适应更新的 β：
+
+```bash
+trading trade kalman-hedge -p 600519-000858
+```
+
+输出对比：OLS 静态 β vs 卡尔曼滤波最终 β ± 标准差。
+
+**何时使用卡尔曼滤波**：
+- 配对关系可能因基本面变化而漂移
+- β 标准差 > 0.1 → 关系不够稳定
+- 更新次数 > 100 → 滤波已充分收敛
+
+### HMM 市场状态识别
+
+隐马尔可夫模型自动识别当前市场处于何种状态（牛市/熊市/震荡）：
+
+```bash
+# 分析沪深300的市场状态
+trading trade hmm-state -s 000300
+
+# 分析上证指数
+trading trade hmm-state -s 000001
+```
+
+模型自动训练并保存到 `./data/models/hmm/`，支持加载历史模型。输出状态概率分布和各状态的平均收益/波动特征。
+
+### PCA 统计套利
+
+用 PCA 提取共性因子，做多被低估的股票、做空被高估的股票：
+
+> PCA 套利属于高级策略，需要运行完整的策略引擎，CLI 提供的是 PCA 因子分析入口。实际使用参考 `src/trading_system/strategy/pca_arbitrage.py`。
+
+---
+
+## ⚡ Phase 4：日内多频率 & 微观结构
+
+> **核心理念**：日线数据丢失了日内微观结构信息。在更高频率上捕捉信号，可以获得额外的 Alpha。
+
+### 日内 K 线数据
+
+```bash
+# 获取贵州茅台30分钟K线（最近5个交易日）
+trading data intraday 600519 -p 30min -d 5
+
+# 获取5分钟K线
+trading data intraday 600519 -p 5min -d 3
+
+# 获取60分钟K线
+trading data intraday 600519 -p 60min -d 20
+```
+
+支持周期：`5min` / `15min` / `30min` / `60min`。
+
+### 波动率预测
+
+```bash
+# EWMA波动率预测（RiskMetrics λ=0.94）
+trading trade vol-forecast -s 600519 -m ewma
+
+# GARCH(1,1)波动率预测
+trading trade vol-forecast -s 600519 -m garch
+```
+
+输出当前日波动率 + 未来1~5天的预测波动率（均为年化值）。
+
+**使用场景**：
+- 动态调整止损宽度（高波动 → 宽止损）
+- 仓位动态调整（高波动 → 减仓）
+- 期权定价参考
+
+### Tick 数据买卖压力
+
+逐笔成交数据分析，判断当前市场的买方/卖方力量对比：
+
+```bash
+trading trade tick-analysis -s 600519
+```
+
+输出核心信号：
+- **成交量不平衡**：(买量 - 卖量) / 总成交量，正值 = 买方主导
+- **单笔大小不平衡**：大单是买方还是卖方更多
+- **Tick方向**：Tick中涨跌比例，修正报价驱动的偏差
+- **综合评分** (>0.2 = 买方强势, <-0.2 = 卖方强势)
+
+---
+
+## 🧪 Phase 5：回测严谨性 — 保护你不被自己骗
+
+> **核心理念**：99% 的回测 Sharpe Ratio 是数据挖掘的产物。必须用统计方法区分"真实 Alpha"和"运气"。
+
+### Deflated Sharpe Ratio 显著性检验
+
+```bash
+# 测试策略的统计显著性（50次假设参数尝试）
+trading trade test-significance -s trend_following -y 000001 -n 50
+```
+
+**检验指标说明**：
+
+| 指标 | 解释 | 优秀阈值 |
+|------|------|----------|
+| 原始 Sharpe | 常规年化夏普比率 | > 1.5 |
+| **Deflated Sharpe** | 校正了多次尝试的数据挖掘偏差 | **> 2.0** |
+| Haircut Sharpe | 简化版：夏普 × (1 - √(ln(N)/T)) | > 1.0 |
+| 月度 Alpha t-stat | 月度超额收益的 t 检验 | > 2.0 |
+| 显著性等级 | 综合判断 | SIGNIFICANT / HIGHLY SIGNIFICANT |
+
+**为什么需要 Deflated Sharpe？**
+- 如果你测试了50个参数组合，选出最好的那个，它的 Sharpe 是"被选出来的"
+- Expected Maximum Sharpe under null ≈ √(2 × ln(N))
+- 你看到的可能只是运气最好的那次，而非策略真的有 Alpha
+- Deflated Sharpe 减去了这个"选择偏差"
+
+### Monte Carlo 概率回测
+
+传统回测给出"一个结果"，Monte Carlo 回测给出"结果分布"：
+
+```bash
+# 500条Monte Carlo路径的概率回测
+trading trade backtest-mc -s 600519 -st trend_following -n 500
+```
+
+输出：
+- **最终权益分布**：P10 / P25 / P50 / P75 / P90
+- **亏损概率**：P(最终权益 < 初始资金)
+- **预期夏普**：所有路径的平均夏普
+
+**解读示例**：
+- P50 = 112,000，P10 = 85,000 → 中位盈利12%，但10%概率亏15%
+- 亏损概率 = 18% → 每5.5次就亏1次
+- 夏普 = 0.8 → 风险调整后收益一般
+
+Monte Carlo 回测让你**诚实面对策略的真实不确定性**，而不是被一条最优路径迷惑。
 
 ### ⚙️ 配置文件
 

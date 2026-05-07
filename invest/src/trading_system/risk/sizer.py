@@ -94,7 +94,7 @@ class PositionSizer:
 
         quantity = int(quantity / 100) * 100
         if quantity <= 0:
-            quantity = 100
+            return 0.0
 
         logger.info(
             "Position calc: %s base=%.0f vol=%.2f dd=%.2f conf=%.2f total=%.2f qty=%.0f",

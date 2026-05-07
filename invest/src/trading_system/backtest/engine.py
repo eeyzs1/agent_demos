@@ -276,29 +276,45 @@ class BacktestEngine:
                 result.t1_blocked_count += 1
             return None
 
-        if pos.side == PositionSide.LONG:
-            if pos.trailing_stop is not None and low <= pos.trailing_stop:
-                return "trailing_stop", pos.trailing_stop * (1 - self._slippage_pct)
-            if low <= pos.stop_loss:
-                return "stop_loss", pos.stop_loss * (1 - self._slippage_pct)
-            if high >= pos.take_profit:
-                return "take_profit", pos.take_profit * (1 - self._slippage_pct)
-        else:
-            if pos.trailing_stop is not None and high >= pos.trailing_stop:
-                return "trailing_stop", pos.trailing_stop * (1 + self._slippage_pct)
-            if high >= pos.stop_loss:
-                return "stop_loss", pos.stop_loss * (1 + self._slippage_pct)
-            if low <= pos.take_profit:
-                return "take_profit", pos.take_profit * (1 + self._slippage_pct)
+        for check_fn in [self._check_trailing_stop, self._check_stop_loss,
+                         self._check_take_profit, self._check_timeout]:
+            exit_result = check_fn(pos, high, low, date)
+            if exit_result:
+                return exit_result
 
+        return None
+
+    def _check_trailing_stop(
+        self, pos: Position, high: float, low: float, date: pd.Timestamp
+    ) -> Optional[tuple[str, float]]:
+        if pos.trailing_stop is None:
+            return None
+        if pos.side == PositionSide.LONG and low <= pos.trailing_stop:
+            return "trailing_stop", pos.trailing_stop * (1 - self._slippage_pct)
+        return None
+
+    def _check_stop_loss(
+        self, pos: Position, high: float, low: float, date: pd.Timestamp
+    ) -> Optional[tuple[str, float]]:
+        if pos.side == PositionSide.LONG and low <= pos.stop_loss:
+            return "stop_loss", pos.stop_loss * (1 - self._slippage_pct)
+        return None
+
+    def _check_take_profit(
+        self, pos: Position, high: float, low: float, date: pd.Timestamp
+    ) -> Optional[tuple[str, float]]:
+        if pos.side == PositionSide.LONG and high >= pos.take_profit:
+            return "take_profit", pos.take_profit * (1 - self._slippage_pct)
+        return None
+
+    def _check_timeout(
+        self, pos: Position, high: float, low: float, date: pd.Timestamp
+    ) -> Optional[tuple[str, float]]:
         holding_days = pos.holding_days_at(date.to_pydatetime())
         if holding_days >= pos.max_holding_days:
             close_ref = low if pos.side == PositionSide.LONG else high
-            slip = (
-                1 - self._slippage_pct if pos.side == PositionSide.LONG else 1 + self._slippage_pct
-            )
+            slip = 1 - self._slippage_pct if pos.side == PositionSide.LONG else 1 + self._slippage_pct
             return "timeout", close_ref * slip
-
         return None
 
     def run(self, data: pd.DataFrame, symbol: str = "") -> BacktestResult:
@@ -313,11 +329,7 @@ class BacktestEngine:
         signals = self._strategy.generate_signals(data)
         signal_map: dict[pd.Timestamp, list[Signal]] = {}
         for sig in signals:
-            ts = (
-                sig.timestamp
-                if isinstance(sig.timestamp, pd.Timestamp)
-                else pd.Timestamp(sig.timestamp)
-            )
+            ts = pd.Timestamp(sig.timestamp).floor("D")
             if ts not in signal_map:
                 signal_map[ts] = []
             sig.symbol = symbol
@@ -413,8 +425,12 @@ class BacktestEngine:
                             is_t1_locked=True,
                         )
 
-                    elif sig.signal_type == SignalType.SELL and symbol in positions:
-                        pos = positions[symbol]
+                    elif sig.signal_type == SignalType.SELL:
+                        if symbol not in positions:
+                            continue
+                        pos = positions.get(symbol)
+                        if pos is None or pos.side != PositionSide.LONG:
+                            continue
                         if pos.is_t1_locked_on(date.to_pydatetime()):
                             result.t1_blocked_count += 1
                             continue
@@ -430,18 +446,11 @@ class BacktestEngine:
                         result.total_sell_commission += sell_cost.commission
                         result.total_stamp_tax += sell_cost.stamp_tax
                         result.total_transfer_fee += sell_cost.transfer_fee
-                        if pos.side == PositionSide.LONG:
-                            pnl = (
-                                (exit_price - pos.entry_price) * pos.quantity
-                                - pos.commission
-                                - commission
-                            )
-                        else:
-                            pnl = (
-                                (pos.entry_price - exit_price) * pos.quantity
-                                - pos.commission
-                                - commission
-                            )
+                        pnl = (
+                            (exit_price - pos.entry_price) * pos.quantity
+                            - pos.commission
+                            - commission
+                        )
                         risk = pos.risk_amount if pos.risk_amount > 0 else 1
                         r_mult = pnl / risk
                         holding_days = pos.holding_days_at(date.to_pydatetime())

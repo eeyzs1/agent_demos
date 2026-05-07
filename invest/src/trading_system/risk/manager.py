@@ -1,9 +1,10 @@
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 from trading_system.core.config import RiskConfig
+from trading_system.risk.circuit_breaker import BreakerType, CircuitBreaker
 from trading_system.risk.sizer import PositionSizer
 from trading_system.strategy.base import PositionSide, Signal, SignalType
 
@@ -132,10 +133,10 @@ class RiskManager:
         self._daily_loss = 0.0
         self._daily_trades = 0
         self._total_trades = 0
-        self._circuit_breaker_active = False
-        self._circuit_breaker_until: Optional[datetime] = None
         self._closed_trades: list[dict] = []
         self._sizer = PositionSizer(config, initial_capital)
+        self._breaker = CircuitBreaker()
+        self._breaker.initialize(initial_capital)
 
     @property
     def equity(self) -> float:
@@ -152,6 +153,7 @@ class RiskManager:
         return dict(self._positions)
 
     def get_state(self) -> RiskState:
+        breaker_status = self._breaker.get_status()
         return RiskState(
             equity=self._equity,
             peak_equity=self._peak_equity,
@@ -160,8 +162,8 @@ class RiskManager:
             daily_loss=self._daily_loss,
             daily_trades=self._daily_trades,
             total_trades=self._total_trades,
-            is_circuit_breaker_active=self._circuit_breaker_active,
-            circuit_breaker_until=self._circuit_breaker_until,
+            is_circuit_breaker_active=breaker_status["is_any_active"],
+            circuit_breaker_until=None,
             vol_multiplier=self._sizer.calc_vol_multiplier(),
             drawdown_multiplier=PositionSizer.calc_drawdown_multiplier(
                 self.current_drawdown, self._config
@@ -179,14 +181,11 @@ class RiskManager:
         )
 
     def validate_signal(self, signal: Signal) -> tuple[bool, str]:
-        if self._circuit_breaker_active:
-            if self._circuit_breaker_until and datetime.now() >= self._circuit_breaker_until:
-                self._deactivate_circuit_breaker()
-            else:
-                return False, "Circuit breaker is active - trading suspended"
+        if self._breaker.is_any_active:
+            return False, "Circuit breaker is active - trading suspended"
 
         if self.current_drawdown >= self._config.max_drawdown_limit:
-            self._activate_circuit_breaker()
+            self._breaker.check_total_drawdown()
             return False, f"Max drawdown limit reached: {self.current_drawdown:.2%}"
 
         if self._consecutive_losses >= self._config.max_consecutive_losses:
@@ -207,13 +206,17 @@ class RiskManager:
 
         if signal.signal_type == SignalType.BUY and signal.symbol in self._positions:
             existing = self._positions[signal.symbol]
-            if existing.side == "long":
+            if existing.side == PositionSide.LONG:
                 return False, f"Already have long position in {signal.symbol}"
 
-        if signal.signal_type == SignalType.SELL and signal.symbol in self._positions:
+        if signal.signal_type == SignalType.SELL:
+            if signal.symbol not in self._positions:
+                return False, "A-share 不支持做空：无持仓无法卖出"
             existing = self._positions[signal.symbol]
-            if existing.side == "short":
-                return False, f"Already have short position in {signal.symbol}"
+            if existing.side != PositionSide.LONG:
+                return False, "A-share 不支持做空：非多头仓位无法卖出"
+            if existing.is_t1_locked:
+                return False, f"A-share T+1 锁定：{signal.symbol} 今日买入不可卖出"
 
         position_size = self.calculate_position_size(signal)
         position_value = position_size * signal.price
@@ -274,6 +277,7 @@ class RiskManager:
         r_multiple = pnl / position.risk_amount if position.risk_amount > 0 else 0
 
         self._equity += pnl
+        self._breaker.update_equity(self._equity)
 
         if pnl > 0:
             self._consecutive_losses = 0
@@ -281,12 +285,13 @@ class RiskManager:
             self._consecutive_losses += 1
 
         self._daily_loss += min(0, pnl)
+        self._breaker.update_daily_loss(pnl)
 
         if self._equity > self._peak_equity:
             self._peak_equity = self._equity
 
         if abs(self._daily_loss) / self._initial_capital >= self._config.circuit_breaker_loss_pct:
-            self._activate_circuit_breaker()
+            self._breaker.check_daily_loss()
 
         trail_info = ""
         if position.trailing_stop is not None:
@@ -352,28 +357,10 @@ class RiskManager:
 
         return closed
 
-    def _activate_circuit_breaker(self) -> None:
-        self._circuit_breaker_active = True
-        self._circuit_breaker_until = datetime.now() + timedelta(
-            days=self._config.circuit_breaker_cooldown_days
-        )
-        logger.warning(
-            "CIRCUIT BREAKER ACTIVATED until %s. Daily loss: %.2f, Drawdown: %.2f%%",
-            self._circuit_breaker_until,
-            self._daily_loss,
-            self.current_drawdown * 100,
-        )
-
-    def _deactivate_circuit_breaker(self) -> None:
-        self._circuit_breaker_active = False
-        self._circuit_breaker_until = None
-        self._daily_loss = 0.0
-        self._daily_trades = 0
-        logger.info("Circuit breaker deactivated - trading resumed")
-
     def reset_daily(self) -> None:
         self._daily_loss = 0.0
         self._daily_trades = 0
+        self._breaker.reset_daily()
 
     def get_closed_trades(self) -> list[dict]:
         return list(self._closed_trades)
