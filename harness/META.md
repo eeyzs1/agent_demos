@@ -3,84 +3,55 @@
 ## What This Is
 A meta-harness that GENERATES complete, runnable, self-evolving harness engineering projects.
 It does NOT do the work itself — it produces executable systems that do the work.
-First principles driven. Evidence based. Never stops at one pass. Innovates beyond requirements.
+First principles driven. Evidence based. Never stops at one pass.
 
-## The Core Loop (NOT a Pipeline)
-```
-┌─→ INTERPRET: What does the user actually need? (first principles)
-│       ↓
-│   GENERATE: Create a COMPLETE harness project (7 layers + 2 cross-cutting + evolution)
-│       ↓
-│   PROVE:   Does every layer have concrete executable artifacts?
-│       ↓
-│   JUDGE:   Is the generated project sufficient? ──→ NO → root cause → loop back
-│       ↓
-│   YES
-│       ↓
-│   EVOLVE:  What did we learn about generation? Improve the meta-harness.
-│       ↓
-│   INNOVATE: What can go beyond the original requirements? Propose innovations.
-│       ↓
-└── LOOP:    Continuous improvement, never stop at "good enough"
-```
+See AGENTS.md for the execution pipeline.
 
-## Architecture: 7 Layers + 2 Cross-Cutting + Self-Evolution + Innovation
+## Architecture: 7 Layers + 4 Cross-Cutting + Self-Evolution + Innovation
 
 Every generated harness project MUST have all of these layers with executable artifacts:
 
 | Layer | Directory | Purpose | Key Artifacts |
 |---|---|---|---|
 | 1. Context Engineering | `context/` | Project context, knowledge index, dynamic loading | `loader.py`, `knowledge-index.yaml` |
-| 2. Tool Integration | `tools/` | Tool schemas, sandbox, permissions, MCP | `schemas.yaml`, `sandbox.yaml`, `permissions.yaml` |
+| 2. Tool Integration | `tools/` | Tool schemas, sandbox, permissions, MCP, tool discovery | `schemas.yaml`, `sandbox.yaml`, `permissions.yaml`, `tool-discovery.py` |
 | 3. Memory & State | `memory/` | Session state, long-term memory, snapshots, compression | `snapshot.py`, `session-state.yaml`, `compression-rules.yaml` |
 | 4. Planning & Orchestration | `planning/` | DAG builder, flow control, sub-agent dispatch, budgets | `dag-builder.py`, `flow-control.yaml`, `sub-agent-dispatch.yaml`, `budget.yaml` |
-| 5. Verification & Guardrails | `verification/` | Format validators, consistency checks, security, self-check | `consistency-check.py`, `self-check.py`, `security-guardrails.yaml` |
+| 5. Verification & Guardrails | `verification/` | Format validators, consistency checks, anti-mock, quality gate, self-check | `consistency-check.py`, `self-check.py`, `anti-mock-check.py`, `quality-gate.py`, `security-guardrails.yaml` |
 | 6. Feedback & Self-Healing | `feedback/` | Error capture, retry, mistake→constraint, human interface | `error-capture.py`, `mistake-to-constraint.py`, `retry-config.yaml` |
 | 7. Constraints & Entropy | `constraints/` | Architecture rules, linter config, entropy reduction, cost | `entropy-reduction.py`, `architecture-rules.yaml`, `cost-budget.yaml` |
 | Cross-cutting A: Security | `security/` | Sandbox, encryption, audit | `sandbox-config.yaml`, `encryption-rules.yaml`, `audit-log.yaml` |
 | Cross-cutting B: Observability | `observability/` | Tracing, metrics, replay, versioning | `tracing.yaml`, `metrics-dashboard.yaml`, `session-replay.yaml`, `versioning.yaml` |
+| Cross-cutting C: Anti-Mock | `verification/` | Mock detection, simulation prevention, real integration enforcement | `anti-mock-check.py`, mock patterns in guard.py |
+| Cross-cutting D: Quality Gate | `verification/` | Engineering-grade vs prototype enforcement, code quality standards | `quality-gate.py`, simplification patterns in guard.py |
 | Self-Evolution | `evolution/` | Evidence-driven evolution with genome and fitness | `framework.md`, `genome.yaml`, `log.yaml` |
-| Innovation | `evolution/` | Post-requirement innovation engine (推陈出新) | `innovation-engine.py`, `product-analyzer.py`, `domain-advancements.yaml` |
+| Innovation | `evolution/` | Post-requirement innovation engine (推陈出新) including tool diversity | `innovation-engine.py`, `product-analyzer.py`, `domain-advancements.yaml` |
 | Enforcement (Root) | `./` | Entry points and mandatory pre-action guard | `orchestrator.py`, `guard.py`, `AGENTS.md`, `CLAUDE.md` |
 
-## Enforcement System: guard.py + orchestrator.py
+## Enforcement System
 
-Every generated project MUST have two root-level enforcement scripts:
+Every generated project MUST have these root-level enforcement scripts:
 
 ### guard.py — Pre-Action Constraint Guard
-- **Runs BEFORE any code change** — validates planned actions against architecture rules
-- Blocks actions that violate constraints (wrong layer access, dependency direction, etc.)
-- Returns PASS or BLOCKED with specific violation descriptions
-- Checks that orchestrator has been run first
-- Usage: `python guard.py --check "I plan to add a new API endpoint"`
+Runs BEFORE any code change. Validates planned actions against architecture rules (layer access, dependency direction), detects mock patterns (mock, fake, stub, simulated, placeholder) and simplification patterns (hardcode, skip validation, no error handling). Returns PASS or BLOCKED. Must verify orchestrator has been run first.
 
 ### orchestrator.py — Active Execution Engine
-- **THE entry point** — tracks progress, manages criteria, enforces verification
-- `--status` shows current progress and next criterion
-- `--verify` runs full verification suite (self-check + consistency + guard report)
-- `--mark-complete` runs verification BEFORE allowing mark — prevents self-certification
-- `--evolve` runs evolution cycle after all criteria met
-- `--innovate` runs innovation engine (推陈出新)
+THE entry point. Tracks progress against criteria. `--status` shows current state. `--verify` runs full suite (anti-mock + quality-gate + self-check + consistency). `--mark-complete` requires verification pass before allowing. `--evolve` and `--innovate` activate after all criteria met.
 
-### Enforcement Chain
-```
-AI starts → reads AGENTS.md → runs orchestrator.py --status
-  → identifies next criterion → runs guard.py --check "plan"
-  → if PASS → implements code → runs orchestrator.py --verify
-  → if PASS → runs orchestrator.py --mark-complete
-  → if ALL DONE → runs orchestrator.py --evolve → --innovate
-```
+### quality-gate.py — Engineering Quality Gate
+Runs BEFORE marking any task complete. Enforces config-vs-hardcode, error handling, input validation, tests, docs, secrets, edge cases. Returns PASS or FAIL.
+
+### anti-mock-check.py — Mock Detection Engine
+Runs during verification. Scans source for mock patterns (`Mock*`, `Fake*`, `Stub*`, `Dummy*`, simulated returns, placeholder data). Returns PASS or FAIL with file paths and line numbers.
 
 ## Innovation Engine: 推陈出新
 
-After all acceptance criteria are met, the system does NOT stop. The innovation engine activates:
+After all acceptance criteria are met, the innovation engine activates:
 
-1. **Product State Analyzer** (`product-analyzer.py`) scans `src/`, identifies implemented features, endpoints, models, tests
-2. **Domain Advancement Patterns** (`domain-advancements*.yaml`) define four stages per domain:
-   - **Basic** → **Solid** → **Advanced** → **Excellent**
-3. **Innovation Engine** (`innovation-engine.py`) proposes innovations for the next stage
-4. Proposals are prioritized by impact/effort ratio and saved to `innovation-log.yaml`
-5. High-effort or security innovations require human approval
+1. **Product State Analyzer** scans `src/` for implemented features, endpoints, models, tests
+2. **Domain Advancement Patterns** define four stages per domain: Basic → Solid → Advanced → Excellent
+3. **Innovation Engine** proposes next-stage innovations, prioritized by impact/effort
+4. High-effort or security innovations require human approval
 
 ## Four-Stage Advancement Model
 
@@ -115,23 +86,20 @@ templates/                 ← Domain templates (Generation Factory format)
   content-system/template.md
 seeds/                     ← Seed artifacts for each layer (copied by generate.py)
   context/                 ← loader.py, knowledge-index.yaml
-  tools/                   ← schemas.yaml, sandbox.yaml, permissions.yaml, mcp-config.json
+  tools/                   ← schemas.yaml, sandbox.yaml, permissions.yaml, mcp-config.json, tool-discovery.py
   memory/                  ← snapshot.py, compression-rules.yaml
   planning/                ← dag-builder.py, flow-control.yaml, sub-agent-dispatch.yaml, budget.yaml
-  verification/            ← consistency-check.py, security-guardrails.yaml, self-check.py
+  verification/            ← consistency-check.py, security-guardrails.yaml, self-check.py, anti-mock-check.py, quality-gate.py
   feedback/                ← error-capture.py, retry-config.yaml, mistake-to-constraint.py, human-interface.yaml
   constraints/             ← architecture-rules.yaml, linter-config.yaml, entropy-reduction.py, cost-budget.yaml
   security/                ← sandbox-config.yaml, encryption-rules.yaml, audit-log.yaml
   observability/           ← tracing.yaml, metrics-dashboard.yaml, session-replay.yaml, versioning.yaml
-  evolution/               ← framework.md, genome.yaml, log.yaml
-                           ← innovation-engine.py (推陈出新)
-                           ← product-analyzer.py
-                           ← domain-advancements.yaml (Web App)
-                           ← domain-advancements-api.yaml (API Service)
+  evolution/               ← framework.md, genome.yaml, log.yaml, innovation-engine.py, product-analyzer.py, domain-advancements.yaml
   orchestrator.py          ← Entry point for generated projects
+  guard.py                 ← Pre-action constraint guard (mock + simplification + tool diversity checks)
 scripts/                   ← Executable scripts (cross-platform Python)
   generate.py              ← Core generation pipeline: task → complete harness project
-  verify-generation.py     ← Verify 7+2 layer completeness of generated projects
+  verify-generation.py     ← Verify 7+4 layer completeness of generated projects
   evolve.py                ← Evidence-driven evolution engine
   verify.py                ← Post-task verification (lint, typecheck, test, secrets)
   pre-task.py              ← Pre-task checks (task card, git status, blockers)
@@ -140,19 +108,13 @@ generated/                 ← Output: generated harness projects (git-ignored)
 memory/                    ← Meta-level memory (compounds over time)
   decisions.md             ← Architecture Decision Records
   generation-log.md        ← Generation history (human-readable)
-  generation-log.yaml      ← Generation history (machine-readable, maintained by generate.py)
+  generation-log.yaml      ← Generation history (machine-readable)
   meta-mistakes.md         ← Meta-harness mistake log
   progress.md              ← Cross-session progress tracking
   task-patterns.md         ← Known task pattern catalog
 ```
 
-## First Principles (Override Everything)
-1. Do not assume the user knows what they want — ask if unclear
-2. If goal is clear but path isn't optimal, say so and suggest better
-3. Chase root causes, never patch symptoms — every decision answers "why"
-4. Output only what changes decisions — cut everything else
-
-## Meta-Rules (Cannot Be Overridden)
+## Meta-Rules (Architecture-Level)
 1. No execution without interpretation
 2. No agent without a harness
 3. No constraint without a reason
@@ -161,11 +123,11 @@ memory/                    ← Meta-level memory (compounds over time)
 6. No patching symptoms — always chase root causes
 7. Generate EXECUTABLE systems, not just documents — every layer must have concrete artifacts
 8. Every generated layer must have concrete artifacts — no empty or doc-only layers
-9. Every generation is logged
-10. Every failure improves the meta (with root cause)
-11. The meta-harness follows its own rules
+9. Every generation is logged (memory/generation-log.yaml)
+10. Every failure improves the meta (with root cause analysis)
+11. The meta-harness follows its own rules (do as I say AND as I do)
 12. Evolution never removes verification (cancer prevention)
 13. Evolution never removes itself (suicide prevention)
-14. All mutations are reversible
+14. All mutations are reversible — keep previous genome version
 15. After requirements are met, innovation engine MUST run (推陈出新)
 16. Innovation proposals require human approval for high-effort or security changes

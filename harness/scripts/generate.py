@@ -59,10 +59,10 @@ LAYER_DIRS = {
 
 LAYER_ARTIFACTS = {
     "context": ["loader.py", "knowledge-index.yaml"],
-    "tools": ["schemas.yaml", "sandbox.yaml", "permissions.yaml", "mcp-config.json"],
+    "tools": ["schemas.yaml", "sandbox.yaml", "permissions.yaml", "mcp-config.json", "tool-discovery.py"],
     "memory": ["session-state.yaml", "compression-rules.yaml", "snapshot.py"],
     "planning": ["dag-builder.py", "flow-control.yaml", "sub-agent-dispatch.yaml", "budget.yaml"],
-    "verification": ["consistency-check.py", "security-guardrails.yaml", "self-check.py"],
+    "verification": ["consistency-check.py", "security-guardrails.yaml", "self-check.py", "anti-mock-check.py", "quality-gate.py"],
     "feedback": ["error-capture.py", "retry-config.yaml", "mistake-to-constraint.py", "human-interface.yaml"],
     "constraints": ["architecture-rules.yaml", "linter-config.yaml", "entropy-reduction.py", "cost-budget.yaml"],
     "security": ["sandbox-config.yaml", "encryption-rules.yaml", "audit-log.yaml"],
@@ -396,78 +396,30 @@ def generate_agents_md(output_dir: Path, task: dict, template: dict) -> None:
 
     content = f"""# {name} — EXECUTION PROTOCOL
 
-## ⚠️ THIS FILE IS YOUR OPERATING SYSTEM. YOU CANNOT DEVIATE FROM IT.
+## ⚠️ THIS FILE IS YOUR OPERATING SYSTEM. YOU CANNOT DEVIATE.
 
-This project is governed by an automated harness. You are an AI agent operating
-within this harness. The harness dictates WHAT you do, HOW you do it, and HOW
-your work is verified. You DO NOT have freedom to choose your own approach.
+This project is governed by an automated harness. Every action goes through orchestrator.py.
 
 ---
 
-## 🔴 CRITICAL: Mandatory Startup Sequence
-
-**The FIRST thing you MUST do when this project is opened:**
-
-1. Run `python orchestrator.py --status` and READ the output
-2. Identify the NEXT pending criterion
-3. Follow the EXACT workflow below
-
-**YOU MUST NEVER skip the orchestrator. Every action goes through it.**
+## 🔴 Startup: Run `python orchestrator.py --status` FIRST
 
 ---
 
-## 🔵 Execution Loop (This Is Your ONLY Workflow)
-
-You MUST follow this loop for EVERY criterion. No exceptions.
+## 🔵 Execution Loop (Follow for EVERY criterion)
 
 ```
-STEP 1: PLAN    → Read constraints in constraints/architecture-rules.yaml
-                  Read workflow in planning/flow-control.yaml
-                  Plan your implementation BEFORE writing code
-
-STEP 2: GUARD   → Run python guard.py --check "describe what you plan to do"
-                  (You MUST describe your plan; guard will block violations)
-
-STEP 3: IMPLEMENT → Write code following:
-                  - The domain constraints listed below
-                  - The architecture rules in constraints/
-                  - The workflow sequence in planning/
-
-STEP 4: VERIFY  → Run python orchestrator.py --verify
-                  (You MUST run this; do not skip)
-
-STEP 5: FIX     → If verification fails:
-                  Run python feedback/error-capture.py to analyze errors
-                  Fix the root cause (not symptoms)
-                  Go back to STEP 4
-
-STEP 6: MARK    → Run python orchestrator.py --mark-complete "criterion text"
-                  (Only when verification passes)
-
-STEP 7: REPEAT  → Go to STEP 1 for the next pending criterion
+PLAN  → Read constraints/, plan your implementation
+GUARD → python guard.py --check "describe your plan"
+          If BLOCKED: fix plan, re-run guard
+CODE  → Implement following domain constraints below
+VERIFY→ python orchestrator.py --verify
+          If FAIL: python feedback/error-capture.py, fix root cause, re-verify
+MARK  → python orchestrator.py --mark-complete "criterion text"
+NEXT  → Repeat for next pending criterion
 ```
 
----
-
-## 🟡 BEFORE You Write ANY Code — Mandatory Pre-Checks
-
-You MUST complete ALL of these before creating or modifying any file:
-
-1. ✅ Run `python guard.py --check "describe your plan"` and get a PASS
-2. ✅ Read `constraints/architecture-rules.yaml` and confirm understanding
-3. ✅ Identify which domain constraints apply to your current task
-4. ✅ Confirm the dependency direction (allowed/forbidden in arch rules)
-
-**If guard.py returns BLOCKED, you CANNOT proceed. Fix your plan first.**
-
----
-
-## 🟢 After ALL Criteria Are Satisfied
-
-```
-python orchestrator.py --evolve     # System self-improvement
-python orchestrator.py --innovate  # Innovation engine (推陈出新)
-```
+When ALL criteria done: `python orchestrator.py --evolve && python orchestrator.py --innovate`
 
 ---
 
@@ -482,57 +434,76 @@ python orchestrator.py --innovate  # Innovation engine (推陈出新)
 ### Domain Template
 {template_name}
 
-### Architecture (Reference)
-7 layers + 2 cross-cutting + self-evolution:
-- Layer 1: Context Engineering → context/
-- Layer 2: Tool Integration → tools/
-- Layer 3: Memory & State → memory/
-- Layer 4: Planning & Orchestration → planning/
-- Layer 5: Verification & Guardrails → verification/
-- Layer 6: Feedback & Self-Healing → feedback/
-- Layer 7: Constraints & Entropy → constraints/
-- Cross-cutting A: Security & Isolation → security/
-- Cross-cutting B: Observability & Governance → observability/
-- Self-Evolution → evolution/
 {constraints_section}
 {workflows_section}
 {topology_section}
 {checklist_section}
 {acceptance_section}
 
+## 🚫 ANTI-MOCK PROTOCOL (ZERO TOLERANCE)
+
+**NEVER simulate, mock, stub, or fake an external dependency when the user requests real integration.**
+
+1. STOP and CONFIRM before any external integration
+2. NEVER return hardcoded responses pretending to be from a real service
+3. NEVER create Mock/Fake/Stub/Dummy classes in production code
+4. ALWAYS use real API keys, real endpoints, real SDKs
+5. If you cannot access the real service: STOP and tell the user what's missing
+
+Run `python verification/anti-mock-check.py --project-root .` before marking ANY task complete.
+
+## 🔧 ENGINEERING STANDARDS (MUST FOLLOW)
+
+| Aspect | ❌ FORBIDDEN | ✅ REQUIRED |
+|--------|-------------|-------------|
+| Config | Hardcoded values | Config files, env vars, CLI args |
+| Error handling | `try/catch` with pass | Typed errors, retry logic |
+| Validation | None or trivial | Schema validation, boundary checks |
+| Logging | `print()` statements | Structured logging |
+| Testing | None | Tests before claiming completion |
+| Secrets | Hardcoded in source | `.env`, never committed |
+| Edge cases | Ignored | Explicitly handled |
+
+Run `python verification/quality-gate.py --check` before marking ANY task complete.
+
+### Architecture (Reference)
+7 layers + 4 cross-cutting:
+- Layer 1-7: context/ tools/ memory/ planning/ verification/ feedback/ constraints/
+- Cross-cutting: security/ observability/ anti-mock-check.py/ quality-gate.py
+- Self-Evolution: evolution/
+
 ---
 
-## 🔴 ABSOLUTE RULES — CANNOT BE OVERRIDDEN
+## 🔴 ABSOLUTE RULES
 
-1. NO code without first running `python guard.py --check`
-2. NO completion without running `python orchestrator.py --verify`
-3. NO constraint violation — guard.py will block you
-4. NO skipping steps in the execution loop
-5. NO implementing multiple criteria at once — ONE at a time
-6. NO self-certification — only orchestrator marks criteria complete
-7. NO symptom patching — chase root causes
-8. NO deviation from domain constraints listed above
-9. Evolution never removes verification or itself
-10. All mutations reversible
+1. NO code without `python guard.py --check`
+2. NO completion without `python orchestrator.py --verify`
+3. ONE criterion at a time — no multi-tasking
+4. NO self-certification — only orchestrator marks complete
+5. NO symptom patching — chase root causes
+6. NO mocking real integrations — real API/SDK or explain why you can't
+7. NO prototype shortcuts — engineering-grade code required
+8. NO tool path dependency — evaluate alternatives
+9. NO passive waiting — proactively advance
+10. Evolution never removes verification or itself
 
 ---
 
-## 🛠️ Quick Reference Commands
+## 🛠️ Quick Reference
 
 ```bash
 python orchestrator.py --status                              # MUST run first
-python guard.py --check "your plan description"              # MUST run before code
+python guard.py --check "your plan"                          # MUST run before code
 python orchestrator.py --verify                              # MUST run after code
-python orchestrator.py --mark-complete "criterion text"      # Mark as done
+python orchestrator.py --mark-complete "criterion"           # Mark done
 python orchestrator.py --evolve                              # Self-improvement
-python orchestrator.py --innovate                            # Innovation suggestions
-python feedback/error-capture.py --error-output <file>      # Analyze errors
-python constraints/entropy-reduction.py                      # Clean up code
+python verification/anti-mock-check.py --project-root .
+python verification/quality-gate.py --check
+python tools/tool-discovery.py --need "capability"
 ```
 """
     (output_dir / "AGENTS.md").write_text(content, encoding="utf-8")
-    (output_dir / "CLAUDE.md").write_text(content, encoding="utf-8")
-    (output_dir / ".cursorrules").write_text(content, encoding="utf-8")
+    (output_dir / "CLAUDE.md").write_text(f"# Redirect to AGENTS.md\n\nAll operating instructions are in AGENTS.md. Read that file.\n", encoding="utf-8")
 
 
 def generate_session_state(output_dir: Path, task: dict) -> None:

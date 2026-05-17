@@ -17,6 +17,7 @@ Generate these artifacts:
 - `tools/sandbox.yaml` — sandbox config (allowed: read from staging sources, write to staging targets; blocked: production DB writes without approval)
 - `tools/permissions.yaml` — permission manifest (ingest agent: read sources + write raw; transform agent: read raw + write output; validate agent: read output + write audit)
 - `tools/mcp-config.json` — MCP server configs if applicable
+- `tools/tool-discovery.py` — tool discovery engine that evaluates alternatives before adopting a library
 
 ### Layer 3: Memory & State
 Generate these artifacts:
@@ -38,6 +39,8 @@ Generate these artifacts:
 - `verification/consistency-check.py` — checks record counts (ingested = processed + errored), schema compatibility, no data leakage
 - `verification/security-guardrails.yaml` — PII detection patterns, sensitive data masking rules, no unmasked PII in output
 - `verification/self-check.py` — self-verification loop (run pipeline → check counts/quality → fix → re-run, max 2 iterations due to idempotency)
+- `verification/anti-mock-check.py` — scans all source code for mock/fake/stub/simulated patterns; blocks completion if mocks found in production code
+- `verification/quality-gate.py` — enforces engineering-grade standards (config-driven, error-handled, validated, tested); blocks completion if prototype-quality detected
 
 ### Layer 6: Feedback & Self-Healing
 Generate these artifacts:
@@ -72,6 +75,16 @@ Generate these artifacts:
 - `evolution/genome.yaml` — current evolvable state
 - `evolution/log.yaml` — mutation history
 
+### Anti-Mock & Quality Enforcement (Cross-Cutting)
+
+Generate these artifacts:
+- `verification/anti-mock-check.py` — mock detection engine (see Layer 5)
+- `verification/quality-gate.py` — engineering quality gate (see Layer 5)
+- `tools/tool-discovery.py` — tool alternative evaluation engine (see Layer 2)
+- Enhanced `guard.py` — pre-action checks now include mock detection, simplification detection, and tool diversity warnings
+
+Enforcement chain: guard.py (pre-code) → anti-mock-check.py (during verify) → quality-gate.py (before completion)
+
 ## Domain-Specific Defaults
 
 ### Constraints (seed for Layer 7)
@@ -81,6 +94,8 @@ Generate these artifacts:
 - Schema changes are backward-compatible
 - Error records are quarantined, not silently dropped
 - Processing is observable (metrics, logs, alerts)
+- NO mock/fake/stub implementations — real integration or explicit blocker declaration
+- Engineering-grade code required — no prototype shortcuts (hardcoded config, skipped validation, deferred error handling)
 
 ### Workflows (seed for Layer 4)
 - Pipeline: define schema → ingest → validate → transform → output → audit

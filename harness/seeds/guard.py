@@ -69,6 +69,43 @@ VIOLATION_PATTERNS = {
         "message": "Self-certification is FORBIDDEN. Only orchestrator.py --verify + --mark-complete can certify.",
         "severity": "BLOCKED",
     },
+    "mock_external_service": {
+        "patterns": [
+            r"\b(?:mock|fake|stub|dummy|simulated)\s+(?:AI|LLM|api|service|client|integration|provider|response)",
+            r"(?:return|yield)\s+(?:mock|fake|simulated|dummy|placeholder|hardcoded)\s+(?:data|response|result|output)",
+            r"class\s+(?:Mock|Fake|Stub|Dummy|Simulated)",
+            r"(?:simulate|mock out|fake|stub)\s+(?:the|an?)\s+(?:AI|LLM|API|service|payment|email|notification)",
+            r"#\s*(?:this would normally call|replace with real|placeholder for real|simulated)",
+        ],
+        "message": "MOCK DETECTED: Your plan involves simulating/mocking an external service. If the user asked for real integration, you MUST use the actual service API/SDK. Mock is FORBIDDEN in production code. If you cannot access the real service, STOP and tell the user what's missing.",
+        "severity": "BLOCKED",
+    },
+    "oversimplification": {
+        "patterns": [
+            r"(?:just|simply|quickly)\s+(?:hardcode|fake|mock|stub|skip|ignore)",
+            r"(?:skip|omit|ignore)\s+(?:error handling|validation|testing|edge cases|logging)",
+            r"(?:add|write|implement)\s+(?:later|afterwards|in the future)",
+            r"TODO.*(?:error handling|validation|tests|logging|docs)",
+            r"(?:no need|don't need|won't need)\s+(?:validation|error handling|tests|logging|docs|config)",
+        ],
+        "message": "OVERSIMPLIFICATION DETECTED: Your plan takes shortcuts that compromise engineering quality. Do NOT defer error handling, validation, testing, or logging. Do NOT hardcode configuration. Do NOT skip edge cases. Engineering-grade code required.",
+        "severity": "BLOCKED",
+    },
+    "tool_path_dependency": {
+        "patterns": [],
+        "check_hint": "Are you using the same tool/library you've used repeatedly without evaluating alternatives? Have you considered at least 2 alternatives?",
+        "message": "TOOL PATH DEPENDENCY: You appear to be defaulting to a familiar tool without evaluation. Run tool-discovery.py or actively search for alternatives before proceeding.",
+        "severity": "WARNING",
+    },
+    "passive_waiting": {
+        "patterns": [
+            r"(?:let me know|tell me|what should I|what do you want|how would you like|shall I) (?:do|proceed|continue|next|start)",
+            r"Ready to (?:proceed|continue|start|go)",
+            r"Let me know if (?:you|I) (?:should|need to|want)",
+        ],
+        "message": "PASSIVE WAITING DETECTED: Do NOT wait for the user to tell you the next step. You know the pipeline. Proactively advance.",
+        "severity": "WARNING",
+    },
 }
 
 
@@ -138,6 +175,66 @@ def analyze_plan(plan_description: str) -> list:
         for kw in ["business logic", "process", "calculate", "transform", "workflow logic"]
     )
     has_multiple_indicator = len(re.findall(r"(?:and also|additionally|furthermore|second,|third,|also)", plan_lower)) > 0
+    has_mock_indicator = any(
+        kw in plan_lower
+        for kw in ["mock", "fake", "stub", "dummy", "simulated", "simulate", "placeholder", "hardcoded response", "mock response"]
+    )
+    has_real_integration_indicator = any(
+        kw in plan_lower
+        for kw in ["integrate", "connect to", "use the", "call the", "api of", "sdk", "real api", "actual api", "openai", "claude", "gpt", "llm"]
+    )
+    has_simplification_indicator = any(
+        kw in plan_lower
+        for kw in ["skip", "ignore", "defer", "later", "quick", "simple", "just", "hardcode", "placeholder", "todo", "fixme"]
+    )
+    has_error_handling_indicator = any(
+        kw in plan_lower
+        for kw in ["error handling", "validation", "edge case", "retry", "exception", "try/catch", "try-except"]
+    )
+    has_config_indicator = any(
+        kw in plan_lower
+        for kw in ["config", ".env", "environment variable", "cli arg", "settings file"]
+    )
+    has_passive_indicator = any(
+        kw in plan_lower
+        for kw in ["let me know", "tell me what", "should i", "shall i", "do you want", "ready to proceed"]
+    )
+
+    if has_mock_indicator and has_real_integration_indicator:
+        violations.append({
+            "rule": "MOCK_REAL_INTEGRATION",
+            "severity": "BLOCKED",
+            "message": "MOCK + REAL INTEGRATION conflict: Your plan mentions both mocking/simulating AND real integration. If the user asked for real integration, mocking is FORBIDDEN. Use the real API/SDK. If the real service is unavailable, STOP and tell the user what's missing.",
+        })
+
+    if has_mock_indicator and not has_real_integration_indicator:
+        violations.append({
+            "rule": "MOCK_DETECTED",
+            "severity": "WARNING",
+            "message": "Your plan mentions mock/fake/simulated/dummy patterns. If the user needs real integration, these are FORBIDDEN. Confirm with the user whether they need REAL or TEST integration.",
+        })
+
+    if has_simplification_indicator and not has_error_handling_indicator:
+        if "skip" in plan_lower or "ignore" in plan_lower or "later" in plan_lower:
+            violations.append({
+                "rule": "OVERSIMPLIFICATION",
+                "severity": "BLOCKED",
+                "message": "Your plan appears to skip/defer error handling or validation. Engineering-grade code MUST include proper error handling, input validation, and config management. Do not defer these to 'later'.",
+            })
+
+    if has_simplification_indicator and not has_config_indicator and ("hardcode" in plan_lower or "hard-code" in plan_lower):
+        violations.append({
+            "rule": "HARDCODED_CONFIG",
+            "severity": "WARNING",
+            "message": "Your plan mentions hardcoding values. Use config files, environment variables, or CLI arguments instead of hardcoding URLs, keys, or thresholds in source code.",
+        })
+
+    if has_passive_indicator:
+        violations.append({
+            "rule": "PASSIVE_WAITING",
+            "severity": "WARNING",
+            "message": "Your response shows passive waiting patterns. Do NOT wait for the user to confirm each step. Proactively advance through the pipeline. Only stop for blockers or assumption confirmations.",
+        })
 
     if has_frontend_indicator and has_db_indicator:
         violations.append({

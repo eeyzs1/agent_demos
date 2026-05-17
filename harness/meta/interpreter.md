@@ -61,3 +61,37 @@ If an assumption is wrong, the entire task definition is wrong.
 - Do NOT skip unknowns — flag them explicitly
 - Do NOT assume the first statement is the real need
 - Do NOT define vague acceptance criteria — they must be provable
+
+## Ambiguity Detection (REQUIRED Before Generation)
+
+Before proceeding to generation, you MUST check for these ambiguity patterns in the user's request:
+
+### 1. Mock/Security Risk Detection
+If the user mentions ANY of these: "AI", "LLM", "GPT", "Claude", "API", "integration", "connect to", "external service", "payment", "email", "notification", "search", "database" — you MUST ask:
+- "Do you need REAL integration with [service], or is this a local/prototype project?"
+- "Do you have API keys/credentials for [service]? If not, I will need to STOP."
+
+Flag in task: `mock_risk: true` and `real_integration_required: [list of services]`
+
+### 2. Over-Simplification Detection
+If the user's request omits: error handling, validation, testing, configuration, logging, or edge case discussion — flag these as assumptions requiring confirmation.
+
+Extract: `quality_requirements: {error_handling, validation, testing, logging, config, edge_cases}` — mark each as explicit or implicit.
+
+### 3. Tool Path Dependency Detection
+If you find yourself thinking "I'll use X for this" without evaluation — STOP.
+Flag in task: `tool_alternatives_required: true`
+Document in assumptions: "I assume [tool X] is appropriate. Alternatives: [list]. Confirm?"
+
+### 4. Proactive Execution Check
+Before waiting for user input, check:
+- Do I know the next step? → Execute it.
+- Am I waiting for confirmation on a non-blocker? → Stop waiting, proceed.
+- Am I about to say "Let me know if..."? → DON'T. Just do the next step.
+
+### 5. Clarify Intent BEFORE Generating
+If the user says "build a chatbot" — ask: "With what AI backend? OpenAI? Claude? Local model?"
+If the user says "connect to database" — ask: "Which database? What ORM? Connection details?"
+If the user says "make it fast" — ask: "What metric? What threshold? Measured how?"
+
+**NEVER assume. ALWAYS clarify ambiguous integration points.**

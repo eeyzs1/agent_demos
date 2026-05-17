@@ -17,6 +17,7 @@ Generate these artifacts:
 - `tools/sandbox.yaml` — sandbox config (allowed commands, network rules, file access boundaries)
 - `tools/permissions.yaml` — permission manifest per agent role (planner: read-only; executor: read-write; verifier: read + execute)
 - `tools/mcp-config.json` — MCP server configs if applicable
+- `tools/tool-discovery.py` — tool discovery engine that evaluates alternatives before adopting a library
 
 ### Layer 3: Memory & State
 Generate these artifacts:
@@ -38,6 +39,8 @@ Generate these artifacts:
 - `verification/consistency-check.py` — script that checks cross-layer consistency (API contract matches implementation, types align, no orphaned references)
 - `verification/security-guardrails.yaml` — sensitive data filters (PII patterns, secret patterns), dangerous operation blockers (drop table, force push, rm -rf)
 - `verification/self-check.py` — self-verification loop script (execute → check → reflect → fix, max 3 iterations)
+- `verification/anti-mock-check.py` — scans all source code for mock/fake/stub/simulated patterns; blocks completion if mocks found in production code
+- `verification/quality-gate.py` — enforces engineering-grade standards (config-driven, error-handled, validated, tested); blocks completion if prototype-quality detected
 
 ### Layer 6: Feedback & Self-Healing
 Generate these artifacts:
@@ -72,6 +75,16 @@ Generate these artifacts:
 - `evolution/genome.yaml` — current evolvable state (constraints, workflows, fitness weights)
 - `evolution/log.yaml` — mutation history with evidence links
 
+### Anti-Mock & Quality Enforcement (Cross-Cutting)
+
+Generate these artifacts:
+- `verification/anti-mock-check.py` — mock detection engine (see Layer 5)
+- `verification/quality-gate.py` — engineering quality gate (see Layer 5)
+- `tools/tool-discovery.py` — tool alternative evaluation engine (see Layer 2)
+- Enhanced `guard.py` — pre-action checks now include mock detection, simplification detection, and tool diversity warnings
+
+Enforcement chain: guard.py (pre-code) → anti-mock-check.py (during verify) → quality-gate.py (before completion)
+
 ## Domain-Specific Defaults
 
 ### Constraints (seed for Layer 7)
@@ -81,6 +94,8 @@ Generate these artifacts:
 - All API endpoints have input validation
 - Authentication required for non-public endpoints
 - Responsive design (mobile-first)
+- NO mock/fake/stub implementations — real integration or explicit blocker declaration
+- Engineering-grade code required — no prototype shortcuts (hardcoded config, skipped validation, deferred error handling)
 
 ### Workflows (seed for Layer 4)
 - Feature: define → design API → implement backend → implement frontend → integrate → test → review

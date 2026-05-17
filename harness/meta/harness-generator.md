@@ -17,6 +17,7 @@ A full project in `generated/[project-name]/` that includes:
 - Sandbox config (Docker/container config if applicable)
 - Permission manifests (what each agent role can access)
 - MCP server configs (if applicable)
+- **NEW: Tool discovery engine** (`tool-discovery.py`) — evaluates alternatives before adopting tools
 
 ### Layer 3: Memory & State
 - Session state files (progress, checkpoints)
@@ -35,12 +36,15 @@ A full project in `generated/[project-name]/` that includes:
 - Logic consistency checks (test configs, linter rules)
 - Security guardrails (sensitive data filters, dangerous operation blockers)
 - Self-verification loop script (execute → check → reflect → fix)
+- **NEW: Anti-mock check** (`anti-mock-check.py`) — scans all code for mock/fake/stub/simulated patterns
+- **NEW: Quality gate** (`quality-gate.py`) — enforces engineering-grade standards before completion
 
 ### Layer 6: Feedback & Self-Healing
 - Error capture and parser (structured error format)
 - Auto-retry with backoff strategy config
 - Error→constraint optimization loop (mistakes.md → constraints/)
 - Human intervention interface (approval queue, escalation config)
+- **NEW: Proactive execution driver** — auto-advance through pipeline without manual prompts
 
 ### Layer 7: Constraints & Entropy Management
 - Architecture constraint rules (dependency direction, layer rules)
@@ -98,3 +102,6 @@ generated/[project-name]/
 - Do NOT generate boilerplate — only what the specific task requires
 - Do NOT skip layers — even minimal implementations are required
 - Do NOT generate without evidence traceability — every artifact traces to a requirement
+- **NEW: Do NOT generate mock/fake/stub implementations** — if the task requires real integration, generate real API client code. If API keys are missing, flag as blocker.
+- **NEW: Do NOT generate prototype-grade shortcuts** — every generated artifact must meet engineering standards (config-driven, error-handled, validated, tested)
+- **NEW: Do NOT generate without tool evaluation** — for each tool/library choice, include a justification comment referencing alternatives considered

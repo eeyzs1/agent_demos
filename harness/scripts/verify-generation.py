@@ -27,7 +27,8 @@ LAYER_REQUIREMENTS = {
     "tools": {
         "description": "Layer 2: Tool Integration",
         "required_files": ["schemas.yaml", "sandbox.yaml", "permissions.yaml"],
-        "min_executable": 0,
+        "required_scripts": ["tool-discovery.py"],
+        "min_executable": 1,
     },
     "memory": {
         "description": "Layer 3: Memory & State",
@@ -44,8 +45,8 @@ LAYER_REQUIREMENTS = {
     "verification": {
         "description": "Layer 5: Verification & Guardrails",
         "required_files": ["security-guardrails.yaml"],
-        "required_scripts": ["consistency-check.py", "self-check.py"],
-        "min_executable": 1,
+        "required_scripts": ["consistency-check.py", "self-check.py", "anti-mock-check.py", "quality-gate.py"],
+        "min_executable": 2,
     },
     "feedback": {
         "description": "Layer 6: Feedback & Self-Healing",
