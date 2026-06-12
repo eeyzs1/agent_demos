@@ -112,82 +112,102 @@ class AKShareSource(DataSource):
     def fetch_financial(self, symbol: str) -> dict:
         import akshare as ak
 
+        result = {
+            "symbol": symbol,
+            "pe_ttm": None,
+            "pb": None,
+            "roe": None,
+            "revenue_growth": None,
+            "net_profit_growth": None,
+            "gross_margin": None,
+            "net_margin": None,
+            "debt_ratio": None,
+            "current_ratio": None,
+            "eps": None,
+            "bps": None,
+            "report_date": None,
+        }
+
         try:
-            result = {
-                "symbol": symbol,
-                "pe_ttm": None,
-                "pb": None,
-                "roe": None,
-                "revenue_growth": None,
-                "net_profit_growth": None,
-                "gross_margin": None,
-                "net_margin": None,
-                "debt_ratio": None,
-                "current_ratio": None,
-                "eps": None,
-                "bps": None,
-                "report_date": None,
-            }
+            spot_df = ak.stock_zh_a_spot_em()
+            row = spot_df[spot_df["代码"] == symbol]
+            if not row.empty:
+                r = row.iloc[0]
+                pe_col = None
+                pb_col = None
+                for col in spot_df.columns:
+                    if "市盈率" in col:
+                        pe_col = col
+                    if "市净率" in col:
+                        pb_col = col
+                if pe_col:
+                    result["pe_ttm"] = self._safe_float(r.get(pe_col))
+                if pb_col:
+                    result["pb"] = self._safe_float(r.get(pb_col))
+        except Exception:
+            pass
 
-            try:
-                df_indicator = ak.stock_a_indicator_lg(symbol=symbol)
-                if not df_indicator.empty:
-                    latest = df_indicator.iloc[-1]
-                    result["pe_ttm"] = self._safe_float(latest.get("pe_ttm"))
-                    result["pb"] = self._safe_float(latest.get("pb"))
-                    if "date" in df_indicator.columns:
-                        result["report_date"] = str(latest.get("date", ""))
-            except Exception:
-                pass
+        try:
+            df_fin = ak.stock_financial_analysis_indicator(symbol=symbol)
+            if not df_fin.empty:
+                latest = df_fin.iloc[0]
+                result["roe"] = self._safe_float(latest.get("净资产收益率(%)"))
+                result["gross_margin"] = self._safe_float(latest.get("销售毛利率(%)"))
+                result["net_margin"] = self._safe_float(latest.get("销售净利率(%)"))
+                result["debt_ratio"] = self._safe_float(latest.get("资产负债率(%)"))
+                result["current_ratio"] = self._safe_float(latest.get("流动比率"))
+                result["eps"] = self._safe_float(latest.get("每股收益(元)"))
+                result["bps"] = self._safe_float(latest.get("每股净资产(元)"))
+                if not result["report_date"]:
+                    result["report_date"] = str(latest.get("日期", ""))
+        except Exception:
+            pass
 
-            try:
-                df_fin = ak.stock_financial_analysis_indicator(symbol=symbol)
-                if not df_fin.empty:
-                    latest = df_fin.iloc[0]
-                    result["roe"] = self._safe_float(latest.get("净资产收益率(%)"))
-                    result["gross_margin"] = self._safe_float(latest.get("销售毛利率(%)"))
-                    result["net_margin"] = self._safe_float(latest.get("销售净利率(%)"))
-                    result["debt_ratio"] = self._safe_float(latest.get("资产负债率(%)"))
-                    result["current_ratio"] = self._safe_float(latest.get("流动比率"))
-                    if not result["report_date"]:
-                        result["report_date"] = str(latest.get("日期", ""))
-            except Exception:
-                pass
-
-            try:
-                df_growth = ak.stock_financial_growth_analysis_indicator(symbol=symbol)
-                if not df_growth.empty:
-                    latest = df_growth.iloc[0]
-                    result["revenue_growth"] = self._safe_float(
-                        latest.get("营业收入同比增长率(%)")
+        try:
+            df_growth = ak.stock_profit_sheet_by_yearly_em(symbol=symbol)
+            if not df_growth.empty and len(df_growth) >= 2:
+                latest = df_growth.iloc[0]
+                prev = df_growth.iloc[1]
+                rev_latest = self._safe_float(latest.get("营业总收入"))
+                rev_prev = self._safe_float(prev.get("营业总收入"))
+                if rev_latest and rev_prev and rev_prev > 0:
+                    result["revenue_growth"] = round(
+                        (rev_latest - rev_prev) / rev_prev * 100, 2
                     )
-                    result["net_profit_growth"] = self._safe_float(
-                        latest.get("净利润同比增长率(%)")
+                profit_latest = self._safe_float(latest.get("净利润"))
+                profit_prev = self._safe_float(prev.get("净利润"))
+                if profit_latest and profit_prev and abs(profit_prev) > 0:
+                    result["net_profit_growth"] = round(
+                        (profit_latest - profit_prev) / abs(profit_prev) * 100, 2
                     )
-            except Exception:
-                pass
+                if not result["report_date"]:
+                    result["report_date"] = str(latest.get("报告期", ""))
+        except Exception:
+            pass
 
-            return result
-        except Exception as e:
-            raise DataFetchError(f"AKShare financial fetch failed for {symbol}: {e}") from e
+        return result
 
     def fetch_north_flow(self) -> list[dict]:
         import akshare as ak
 
         try:
-            df = ak.stock_hsgt_north_net_flow_in_em(symbol="北向")
+            df = ak.stock_hsgt_hist_em(symbol="北向资金")
             if df.empty:
                 return []
             results = []
             for _, row in df.iterrows():
                 results.append({
                     "date": str(row.get("日期", "")),
-                    "sh_net_inflow": self._safe_float(row.get("沪股通净流入")),
-                    "sz_net_inflow": self._safe_float(row.get("深股通净流入")),
-                    "total_net_inflow": self._safe_float(row.get("北向资金净流入")),
-                    "sh_balance": self._safe_float(row.get("沪股通资金余额")),
-                    "sz_balance": self._safe_float(row.get("深股通资金余额")),
-                    "total_balance": self._safe_float(row.get("北向资金资金余额")),
+                    "total_net_inflow": self._safe_float(row.get("当日成交净买额")),
+                    "buy_amount": self._safe_float(row.get("买入成交额")),
+                    "sell_amount": self._safe_float(row.get("卖出成交额")),
+                    "cumulative_net": self._safe_float(row.get("历史累计净买额")),
+                    "daily_inflow": self._safe_float(row.get("当日资金流入")),
+                    "daily_balance": self._safe_float(row.get("当日余额")),
+                    "holding_value": self._safe_float(row.get("持股市值")),
+                    "leading_stock": str(row.get("领涨股", "")),
+                    "leading_stock_code": str(row.get("领涨股-代码", "")),
+                    "hs300": self._safe_float(row.get("沪深300")),
                 })
             return results
         except Exception as e:

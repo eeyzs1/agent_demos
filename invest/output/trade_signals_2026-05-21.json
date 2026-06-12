@@ -1,0 +1,92 @@
+{
+  "generated_at": "2026-05-21T18:01:50.348240",
+  "date": "2026-05-21",
+  "market_summary": {
+    "北向资金": "数据获取失败",
+    "市场情绪": "正常",
+    "生成时间": "2026-05-21 18:01"
+  },
+  "total_decisions": 5,
+  "decisions": [
+    {
+      "symbol": "000001",
+      "name": "平安银行",
+      "price": 10.7,
+      "scorer_score": 49.34,
+      "scorer_rating": "观望",
+      "strategy_signal": "BUY",
+      "strategy_consensus": "moderate",
+      "agreeing_strategies": [
+        "trend_following",
+        "breakout"
+      ],
+      "disagreeing_strategies": [
+        "mean_reversion"
+      ],
+      "fusion_confidence": 0.4964,
+      "fusion_action": "HOLD",
+      "stop_loss": 10.2014,
+      "take_profit": 14.1157
+    },
+    {
+      "symbol": "000006",
+      "name": "深振业Ａ",
+      "price": 10.46,
+      "scorer_score": 48.34,
+      "scorer_rating": "观望",
+      "strategy_signal": null,
+      "strategy_consensus": "no_signal",
+      "agreeing_strategies": [],
+      "disagreeing_strategies": [],
+      "fusion_confidence": 0.2659,
+      "fusion_action": "HOLD",
+      "stop_loss": null,
+      "take_profit": null
+    },
+    {
+      "symbol": "000002",
+      "name": "万  科Ａ",
+      "price": 3.47,
+      "scorer_score": 46.34,
+      "scorer_rating": "观望",
+      "strategy_signal": null,
+      "strategy_consensus": "no_signal",
+      "agreeing_strategies": [],
+      "disagreeing_strategies": [],
+      "fusion_confidence": 0.2549,
+      "fusion_action": "HOLD",
+      "stop_loss": null,
+      "take_profit": null
+    },
+    {
+      "symbol": "000007",
+      "name": "全新好",
+      "price": 11.62,
+      "scorer_score": 44.34,
+      "scorer_rating": "观望",
+      "strategy_signal": null,
+      "strategy_consensus": "no_signal",
+      "agreeing_strategies": [],
+      "disagreeing_strategies": [],
+      "fusion_confidence": 0.2439,
+      "fusion_action": "SELL",
+      "stop_loss": null,
+      "take_profit": null
+    },
+    {
+      "symbol": "000008",
+      "name": "神州高铁",
+      "price": 2.61,
+      "scorer_score": 44.34,
+      "scorer_rating": "观望",
+      "strategy_signal": null,
+      "strategy_consensus": "no_signal",
+      "agreeing_strategies": [],
+      "disagreeing_strategies": [],
+      "fusion_confidence": 0.2439,
+      "fusion_action": "SELL",
+      "stop_loss": null,
+      "take_profit": null
+    }
+  ]
+}

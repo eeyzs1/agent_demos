@@ -1,3 +1,5 @@
+import logging
+from datetime import datetime
 from pathlib import Path
 
 import click
@@ -702,49 +704,216 @@ def stop_trading(ctx):
 @trade.command("recommend")
 @click.option("--top", "-t", default=10, help="推荐股票数量")
 @click.option("--output", "-o", default="./output", help="报告输出目录")
+@click.option("--candidates", "-n", default=100, help="候选股票数量 (50-500)")
 @click.pass_context
-def recommend_stocks(ctx, top, output):
-    """生成每日推荐报告"""
+def recommend_stocks(ctx, top, output, candidates):
+    """生成每日推荐报告（全市场真实扫描）"""
     from trading_system.advisor.daily_report import DailyReportGenerator
     from trading_system.advisor.entry_exit import EntryExitAdvisor
+    from trading_system.pipeline.scan_recommend import ScanRecommendPipeline
     from trading_system.scorer.engine import StockScorer
 
-    console.print("[cyan]正在生成每日推荐报告...[/cyan]")
+    console.print("[cyan]正在全市场扫描...[/cyan]")
     try:
+        pipeline = ScanRecommendPipeline()
+        stock_data_list, market_summary = pipeline.run(candidate_limit=candidates)
+
+        if not stock_data_list:
+            console.print("[red]未获取到有效股票数据，请检查网络或稍后重试[/red]")
+            return
+
+        console.print(f"[green]数据获取完成，共 {len(stock_data_list)} 只股票[/green]")
+        console.print("[cyan]正在进行多因子评分...[/cyan]")
+
         scorer = StockScorer()
+        scores = scorer.rank_stocks(stock_data_list)
+
+        console.print("[cyan]正在生成推荐...[/cyan]")
         advisor = EntryExitAdvisor(scorer)
         generator = DailyReportGenerator(scorer=scorer, advisor=advisor, output_dir=output)
 
-        demo_stocks = [
-            ("600519", {"name": "贵州茅台", "rsi": 45, "ma_bullish": True, "volume_ratio": 1.5,
-                        "volatility": 0.15, "pe_ttm": 30, "pb": 10, "roe": 25,
-                        "revenue_growth": 15, "north_net_inflow": 100, "main_net_inflow": 50,
-                        "on_dragon_tiger": False, "news_sentiment": 0.2, "sector_heat": 70,
-                        "market_mood": 60}),
-            ("000001", {"name": "平安银行", "rsi": 40, "ma_bullish": False, "volume_ratio": 0.8,
-                        "volatility": 0.2, "pe_ttm": 5.5, "pb": 0.6, "roe": 11,
-                        "revenue_growth": 8, "north_net_inflow": 50, "main_net_inflow": 20,
-                        "on_dragon_tiger": False, "news_sentiment": 0.1, "sector_heat": 40,
-                        "market_mood": 50}),
-            ("300750", {"name": "宁德时代", "rsi": 55, "ma_bullish": True, "volume_ratio": 2.0,
-                        "volatility": 0.25, "pe_ttm": 50, "pb": 8, "roe": 15,
-                        "revenue_growth": 40, "north_net_inflow": 200, "main_net_inflow": 80,
-                        "on_dragon_tiger": True, "news_sentiment": 0.3, "sector_heat": 85,
-                        "market_mood": 70}),
-        ]
-
-        scores = scorer.rank_stocks(demo_stocks)
         recommendations = []
         for s in scores[:top]:
-            rec = advisor.recommend_entry(s.symbol, 100.0, s.details)
+            price = s.details.get("price", 0)
+            rec = advisor.recommend_entry(s.symbol, price, s.details)
             recommendations.append(rec)
 
-        market_summary = {"北向资金": "净流入 150亿", "市场情绪": "偏多", "涨跌比": "2800:1800"}
         generator.generate_report(scores, recommendations, market_summary)
+
+        from rich.table import Table
+        table = Table(title=f"Top {min(top, len(scores))} 推荐股票")
+        table.add_column("排名", style="bold", width=4)
+        table.add_column("代码", width=8)
+        table.add_column("名称", width=12)
+        table.add_column("评分", width=6)
+        table.add_column("评级", width=6)
+        table.add_column("价格", width=8)
+
+        for s in scores[:top]:
+            price = s.details.get("price", 0)
+            rating_style = {
+                "强推": "[bold green]强推[/bold green]",
+                "推荐": "[green]推荐[/green]",
+                "观望": "[yellow]观望[/yellow]",
+                "回避": "[red]回避[/red]",
+            }.get(s.rating.value, s.rating.value)
+            table.add_row(
+                str(s.rank), s.symbol, s.name,
+                f"{s.total_score:.1f}", rating_style,
+                f"{price:.2f}" if price else "N/A",
+            )
+
+        console.print(table)
         console.print("[green]推荐报告已生成！[/green]")
         console.print(f"[cyan]报告路径: {output}[/cyan]")
     except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.exception("推荐报告生成失败")
         console.print(f"[red]推荐报告生成失败: {e}[/red]")
+
+
+@trade.command("daily-run")
+@click.option("--candidates", "-n", default=100, help="候选股票数量 (50-500)")
+@click.option("--top", "-t", default=20, help="融合决策股票数量")
+@click.option("--output", "-o", default="./output", help="报告输出目录")
+@click.pass_context
+def daily_run(ctx, candidates, top, output):
+    """每日完整流程: 扫描→评分→策略融合→报告"""
+    from trading_system.pipeline.daily_runner import DailyJobRunner
+
+    console.print("[bold cyan]========== 每日自动化交易任务 ==========[/bold cyan]")
+    start_time = datetime.now()
+
+    try:
+        runner = DailyJobRunner(output_dir=output)
+        result = runner.run_daily(candidate_limit=candidates, top_n=top)
+
+        if result["status"] == "failed":
+            console.print(f"[red]任务失败: {result.get('error', 'unknown')}[/red]")
+            return
+
+        console.print()
+        console.print(f"[bold green]========== 任务完成 (耗时 {result['elapsed_seconds']}秒) ==========[/bold green]")
+        console.print(f"  扫描股票: {result['stocks_scanned']}只")
+        console.print(f"  评分股票: {result['stocks_scored']}只")
+        console.print(f"  融合决策: {result['fusion_decisions']}条")
+        console.print(f"  买入信号: [green]{result['buy_count']}[/green]")
+        console.print(f"  卖出信号: [red]{result['sell_count']}[/red]")
+        console.print(f"  持有建议: [yellow]{result['hold_count']}[/yellow]")
+        console.print()
+
+        if result["top_buy"]:
+            from rich.table import Table
+            table = Table(title="Top 买入推荐（策略融合）")
+            table.add_column("代码", width=10)
+            table.add_column("名称", width=12)
+            table.add_column("评分", width=6)
+            table.add_column("融合置信度", width=10)
+            table.add_column("策略共识", width=8)
+            table.add_column("止损", width=8)
+            table.add_column("止盈", width=8)
+
+            for d in result["top_buy"]:
+                consensus_style = {
+                    "strong": "[bold green]强共识[/bold green]",
+                    "moderate": "[green]中等[/green]",
+                    "weak": "[yellow]弱[/yellow]",
+                }.get(d.get("strategy_consensus", ""), d.get("strategy_consensus", "-"))
+                table.add_row(
+                    d["symbol"], d["name"],
+                    f"{d['scorer_score']:.1f}",
+                    f"{d['fusion_confidence']:.2%}",
+                    consensus_style,
+                    f"{d.get('stop_loss', 0):.2f}" if d.get("stop_loss") else "-",
+                    f"{d.get('take_profit', 0):.2f}" if d.get("take_profit") else "-",
+                )
+
+            console.print(table)
+
+        console.print(f"\n[cyan]报告目录: {output}[/cyan]")
+        console.print(f"[cyan]交易信号: {result['signals_file']}[/cyan]")
+        console.print(f"[cyan]每日汇总: {result['summary_file']}[/cyan]")
+
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.exception("每日任务失败")
+        console.print(f"[red]每日任务失败: {e}[/red]")
+
+
+@trade.command("daily-trade")
+@click.option("--candidates", "-n", default=100, help="候选股票数量 (50-500)")
+@click.option("--top", "-t", default=20, help="融合决策股票数量")
+@click.option("--output", "-o", default="./output", help="输出目录")
+@click.option("--dry-run/--live", default=True, help="模拟运行(默认) / 实际下单")
+@click.pass_context
+def daily_trade(ctx, candidates, top, output, dry_run):
+    """每日自动交易: 扫描→评分→融合→风控→下单"""
+    from trading_system.pipeline.trader import DailyTrader
+    from rich.table import Table
+
+    config = ctx.obj.get("config")
+    mode_label = "[yellow]模拟运行 (DRY RUN)[/yellow]" if dry_run else "[bold red]实盘交易[/bold red]"
+    console.print(f"[bold cyan]========== 每日自动交易 {mode_label} ==========[/bold cyan]")
+    start_time = datetime.now()
+
+    try:
+        trader = DailyTrader(config=config, output_dir=output)
+        report = trader.run(candidate_limit=candidates, top_n=top, dry_run=dry_run)
+
+        console.print()
+        portfolio = report["portfolio"]
+        trade_sum = report["trade_summary"]
+
+        console.print(f"[bold green]========== 交易完成 (耗时 {report['elapsed_seconds']}秒) ==========[/bold green]")
+        console.print(f"  账户权益: {portfolio['total_equity']:,.0f}")
+        console.print(f"  可用资金: {portfolio['cash']:,.0f}")
+        console.print(f"  当前回撤: {portfolio['drawdown']:.2%}")
+        console.print(f"  当前持仓: {portfolio['positions_count']}只")
+        console.print(f"  熔断状态: {'[red]已触发[/red]' if portfolio['circuit_breaker'] else '[green]正常[/green]'}")
+        console.print()
+        console.print(f"  本次交易: 共 {trade_sum['total']} 笔")
+        console.print(f"  已成交: [green]{trade_sum['filled']}[/green]")
+        console.print(f"  已拒绝: [red]{trade_sum['rejected']}[/red]")
+        console.print(f"  买入信号: {trade_sum['buy_signals']}")
+        console.print(f"  卖出信号: {trade_sum['sell_signals']}")
+
+        if report.get("position_checks", 0) > 0:
+            console.print(f"  止损/止盈触发: {report['position_checks']}笔")
+
+        trades = report.get("trades", [])
+        if trades:
+            console.print()
+            table = Table(title="交易明细")
+            table.add_column("代码", width=10)
+            table.add_column("名称", width=10)
+            table.add_column("方向", width=6)
+            table.add_column("数量", width=6)
+            table.add_column("价格", width=8)
+            table.add_column("置信度", width=8)
+            table.add_column("状态", width=10)
+
+            for t in trades:
+                action_style = f"[green]{t['action']}[/green]" if t['action'] == 'BUY' else f"[red]{t['action']}[/red]"
+                status_style = {
+                    "filled": "[green]已成交[/green]",
+                    "rejected": "[red]已拒绝[/red]",
+                    "dry_run": "[yellow]模拟[/yellow]",
+                }.get(t["status"], t["status"])
+                table.add_row(
+                    t["symbol"], t["name"], action_style,
+                    str(t["quantity"]), f"{t['price']:.2f}",
+                    f"{t['confidence']:.1%}", status_style,
+                )
+            console.print(table)
+
+        console.print(f"\n[cyan]交易报告: {output}/trade_report_{report['date']}.json[/cyan]")
+
+        trader.stop()
+
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.exception("自动交易失败")
+        console.print(f"[red]自动交易失败: {e}[/red]")
 
 
 @trade.command("estimate-impact")

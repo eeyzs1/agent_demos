@@ -41,6 +41,10 @@ class TradingEngine:
         self._data_store = self._container.get("data_store")
         self._risk_manager = self._container.get("risk_manager")
 
+        if self._risk_manager is None:
+            from trading_system.risk.manager import RiskManager
+            self._risk_manager = RiskManager(config.risk, config.trading.initial_capital)
+
         if config.trading.mode == "paper":
             self._broker: BrokerInterface = self._container.get("broker")
         elif config.trading.mode == "qmt":

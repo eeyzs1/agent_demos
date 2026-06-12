@@ -1,0 +1,52 @@
+{
+  "timestamp": "2026-05-21T19:11:35.025379",
+  "date": "2026-05-21",
+  "mode": "dry_run",
+  "elapsed_seconds": 67.2,
+  "market_summary": {
+    "北向资金": "数据获取失败",
+    "市场情绪": "正常",
+    "生成时间": "2026-05-21 19:12"
+  },
+  "portfolio": {
+    "cash": 100000.0,
+    "total_equity": 100000.0,
+    "drawdown": 0.0,
+    "positions_count": 0,
+    "circuit_breaker": false
+  },
+  "position_checks": 0,
+  "trade_summary": {
+    "total": 2,
+    "filled": 0,
+    "rejected": 0,
+    "buy_signals": 0,
+    "sell_signals": 2
+  },
+  "trades": [
+    {
+      "symbol": "000007",
+      "name": "全新好",
+      "action": "SELL",
+      "quantity": 0,
+      "price": 11.62,
+      "confidence": 0.2439,
+      "strategy": "fusion",
+      "status": "dry_run",
+      "reason": "模拟运行，未实际下单",
+      "order_id": ""
+    },
+    {
+      "symbol": "000008",
+      "name": "神州高铁",
+      "action": "SELL",
+      "quantity": 0,
+      "price": 2.61,
+      "confidence": 0.2439,
+      "strategy": "fusion",
+      "status": "dry_run",
+      "reason": "模拟运行，未实际下单",
+      "order_id": ""
+    }
+  ]
+}

@@ -51,6 +51,7 @@ class ServiceContainer:
 
 def create_container(config: Any) -> ServiceContainer:
     from trading_system.core.config import AppConfig
+    from trading_system.core.events import EventBus
     from trading_system.data.store import DataStore
     from trading_system.execution.broker import PaperBroker
     from trading_system.notification.manager import NotificationManager
@@ -59,11 +60,17 @@ def create_container(config: Any) -> ServiceContainer:
     app_config: AppConfig = config
 
     container = ServiceContainer()
+
+    event_bus = EventBus()
+    container.register_instance("event_bus", event_bus)
     container.register_instance("config", app_config)
 
     container.register_factory(
         "data_store",
-        lambda: DataStore(app_config.data),
+        lambda: DataStore(
+            cache_dir=app_config.data.cache_dir,
+            db_url=app_config.data.database_url,
+        ),
         singleton=True,
     )
 
@@ -81,7 +88,13 @@ def create_container(config: Any) -> ServiceContainer:
 
     container.register_factory(
         "notification_manager",
-        lambda: NotificationManager(app_config.notification),
+        lambda: NotificationManager(
+            event_bus=event_bus,
+            feishu_webhook=app_config.notification.feishu_webhook or "",
+            dingtalk_webhook=app_config.notification.dingtalk_webhook or "",
+            dingtalk_secret=app_config.notification.dingtalk_secret or "",
+            wechat_sckey=app_config.notification.wechat_sckey or "",
+        ),
         singleton=True,
     )
 

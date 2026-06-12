@@ -43,6 +43,7 @@ trading --help
 src/trading_system/
 ├── core/          事件总线、配置管理、审计日志
 ├── data/          市场数据获取(日线/日内)、缓存、观察列表
+├── pipeline/      🔥 全市场扫描→评分→策略融合→交易完整管线
 ├── strategy/      策略基类 + 3个内置策略 + 协整配对 + PCA套利
 ├── portfolio/     协方差估计、组合优化、风险平价/HRP、因子模型
 ├── ml/            HMM状态识别、卡尔曼滤波、波动率预测、微观结构信号
@@ -75,6 +76,9 @@ src/trading_system/
 | `trading research` | `market` | 全市场投研概览 | — |
 | `trading trade` | `status` | 查看交易系统状态 | — |
 | `trading trade` | `start` | 启动交易引擎 | — |
+| `trading trade` | `recommend` | 全市场扫描 + 多因子评分 + 推荐报告 | — |
+| `trading trade` | `daily-run` | 每日完整流程: 扫描→评分→策略融合→报告 | — |
+| `trading trade` | `daily-trade` | 每日自动交易: 扫描→评分→融合→风控→下单 | — |
 | `trading trade` | `estimate-impact` | 估算市场冲击成本 | Phase 1 |
 | `trading trade` | `execution-plan` | 生成最优执行计划(TWAP/VWAP/IS) | Phase 1 |
 | `trading trade` | `tca-report` | 交易成本分析周度报告 | Phase 1 |
@@ -204,6 +208,46 @@ trading research market
 - 汇总研报评级和目标价
 - 检查重要公告和风险提示
 - 生成关键发现和风险警告
+
+### 💰 自动化交易（核心流程）
+
+```bash
+# 每日推荐报告（扫描→评分→推荐）
+trading trade recommend --candidates 200 --top 20
+
+# 每日完整分析（扫描→评分→策略融合→报告）
+trading trade daily-run --candidates 200 --top 30
+
+# 每日自动交易（扫描→评分→融合→风控→下单）
+trading trade daily-trade --candidates 200 --top 30          # 模拟运行
+trading trade daily-trade --candidates 200 --top 30 --live   # 实盘交易（需QMT）
+```
+
+**完整交易管线架构：**
+
+```
+全市场扫描        多因子评分         策略融合            风控+执行
+┌──────────┐    ┌──────────┐    ┌──────────────┐    ┌──────────────┐
+│ 5500+只A股│──→│ 技术40%  │──→│ 趋势跟踪      │──→│ 风控校验      │
+│ 过滤ST/退市│    │ 基本面30%│    │ 均值回归      │    │ 仓位计算      │
+│ PE/PB筛选  │    │ 资金20%  │    │ 突破策略      │    │ T+1检查       │
+│ 成交量排序  │    │ 情绪10%  │    │ 共识加权融合   │    │ 熔断保护      │
+└──────────┘    └──────────┘    └──────────────┘    └──────────────┘
+                                                        ↓
+                                                  ┌──────────────┐
+                                                  │ Paper/QMT下单 │
+                                                  │ 交易报告 JSON │
+                                                  │ 交易信号 JSON │
+                                                  └──────────────┘
+```
+
+**输出文件** (`./output/`)：
+| 文件 | 说明 |
+|------|------|
+| `daily_{date}.md` | Markdown 日报 |
+| `trade_signals_{date}.json` | 结构化交易信号（含止损止盈、策略共识） |
+| `daily_summary_{date}.json` | 每日统计汇总 |
+| `trade_report_{date}.json` | 交易执行报告（订单明细） |
 
 ### 💰 交易执行
 

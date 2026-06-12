@@ -1,0 +1,358 @@
+{
+  "project": "AStockAdvisor-QuantEvolution",
+  "branchName": "astock/quant-evolution-v1",
+  "description": "A 股量化交易系统纯统计进化方案 — 从量化交易第一性原理出发：执行优化保护 edge、组合数学控制风险、统计套利发现 alpha、多频率数据捕捉微观结构。零 LLM 依赖，所有方法基于确定性统计算法，CPU 友好，可严格回测验证。",
+  "design_principles": [
+    "零 LLM 依赖 — 所有信号和方法基于确定性统计算法",
+    "可解释性 — 每个信号必须能追溯到具体的统计检验或数学公式",
+    "计算效率 — 单 CPU 核心完成全流程，不引入 GPU 依赖",
+    "可回测 — 所有方法必须能在历史数据上严格 walk-forward 验证",
+    "成本优先 — 执行优化和 TCA 先于新信号，因为执行成本能吃掉的 alpha 比你想的多",
+    "组合视角 — 仓位管理从单资产独立计算升级到协方差感知的组合优化",
+    "统计严谨 — 所有因子和策略必须通过统计显著性检验（Deflated Sharpe, Bonferroni 校正）",
+    "增量替换 — 新模块与旧模块并行验证 60 个交易日，回归测试全部通过才切换"
+  ],
+  "evolution_phases": {
+    "phase_1": {
+      "name": "执行 Alpha — 不要让你的 edge 被交易成本吃掉",
+      "goal": "引入市场冲击模型、最优执行调度和执行质量分析，将隐性交易成本（冲击+价差+延迟）从不可见变为可量化可优化",
+      "stories": ["US-Q01", "US-Q02", "US-Q03"]
+    },
+    "phase_2": {
+      "name": "组合数学 — 从单资产到协方差感知的组合管理",
+      "goal": "用现代投资组合理论升级仓位管理：协方差矩阵估计、均值-方差优化、风险平价、A 股因子模型",
+      "stories": ["US-Q04", "US-Q05", "US-Q06", "US-Q07"]
+    },
+    "phase_3": {
+      "name": "统计信号发现 — 发现传统规则策略看不到的 alpha",
+      "goal": "引入协整配对交易、HMM 状态识别、PCA 因子提取、卡尔曼滤波动态对冲等纯统计方法",
+      "stories": ["US-Q08", "US-Q09", "US-Q10", "US-Q11"]
+    },
+    "phase_4": {
+      "name": "多频率与微观结构 — 日线不够，往日内走",
+      "goal": "支持 30/60 分钟 K 线、订单簿不平衡信号、GARCH 波动率预测、Overnight/Intraday 收益分解",
+      "stories": ["US-Q12", "US-Q13", "US-Q14"]
+    },
+    "phase_5": {
+      "name": "回测严谨性 — 确保你的 alpha 是真实的",
+      "goal": "引入 Deflated Sharpe Ratio、概率加权回测、更精细的交易成本建模、蒙特卡洛显著性检验",
+      "stories": ["US-Q15", "US-Q16"]
+    }
+  },
+  "userStories": [
+    {
+      "id": "US-Q01",
+      "title": "实现市场冲击成本模型 (Almgren-Chriss)",
+      "description": "作为执行交易员，我需要系统能估算每笔交易的预期市场冲击成本，而不是假设固定 0.1% 滑点。当前系统对滑点的处理是统一的 slippage_pct=0.001，完全不考虑订单规模、股票流动性、波动率差异。大单的冲击成本远大于小单，高波动股票的冲击成本大于低波动股票，统一滑点是致命的简化",
+      "acceptanceCriteria": [
+        "新增 execution/impact.py 模块，提供 MarketImpactModel 类",
+        "实现 Almgren-Chriss 框架的线性冲击模型：temporary_impact = eta * sigma * (Q / (V * T)) ^ beta，permanent_impact = gamma * sigma * (Q / (V * T))，其中 Q=订单量，V=日均成交量，T=执行时间占比，sigma=日波动率",
+        "参数默认值：eta=0.15（临时冲击系数）、beta=0.6（非线性指数）、gamma=0.05（永久冲击系数），均可通过配置文件覆盖",
+        "MarketImpactModel.estimate_impact(symbol, order_quantity, order_side, execution_horizon_minutes=30) 方法返回 dict：temporary_impact_bps、permanent_impact_bps、total_impact_bps、expected_slippage_price",
+        "通过 akshare 获取日均成交量：DataStore 新增 fetch_daily_volume(symbol, days=20) 方法，返回最近 20 个交易日均成交量",
+        "BacktestEngine 新增 use_impact_model 参数，设为 True 时用 MarketImpactModel 替代固定 slippage_pct，每个订单根据规模和股票特性计算实际冲击成本",
+        "PaperBroker 新增 impact_model 可选参数，启用时在 submit_order 中使用 MarketImpactModel 调整成交价",
+        "新增 CLI 命令 trading estimate-impact --symbol 000001 --quantity 10000，输出预期冲击成本明细",
+        "Tests pass — test_impact_model.py 包含：订单量越大冲击越大（10000股>1000股）、低流动性股票冲击大于高流动性、临时冲击>永久冲击、BacktestEngine use_impact_model=True 时手续费高于固定滑点（大单情况）"
+      ],
+      "priority": 1,
+      "passes": false,
+      "dependencies": [],
+      "notes": "阶段一核心。市场冲击模型是执行优化的基础。Almgren-Chriss 是业界标准框架，参数少、计算简单、解释性强。eta/beta/gamma 初始用文献默认值，后续可通过实盘数据校准。注意 A 股的涨跌停限制使冲击模型在极端行情下可能失真，需要和 US-002 的 limit_price 联动。"
+    },
+    {
+      "id": "US-Q02",
+      "title": "实现最优执行调度 (TWAP/VWAP/Implementation Shortfall)",
+      "description": "作为执行交易员，我需要系统将大单拆分为小单分时执行，而非一次性市价单砸进去。当前执行只有 MARKET 订单，无拆分逻辑。对于流动性一般的 A 股中小盘，一笔大市价单可能瞬间推高价格 2-3 个 tick，直接吃掉策略 alpha",
+      "acceptanceCriteria": [
+        "新增 execution/scheduler.py 模块，提供 ExecutionScheduler 类",
+        "支持三种执行策略：(a) TWAP (Time-Weighted Average Price) — 将总订单量等分为 N 个子单，每 interval 执行一个子单 (b) VWAP (Volume-Weighted Average Price) — 根据历史日内成交量分布曲线分配子单量 (c) Implementation Shortfall — 使用 Almgren-Chriss 框架求解最优执行速度（风险厌恶参数 lambda 可配，默认 1e-6）",
+        "ExecutionScheduler.generate_schedule(order, strategy='twap', total_minutes=30, num_slices=10) 返回 ExecutionSchedule 数据类：slices (List[dict] 每个子单的时间、数量、限价)、expected_avg_price、expected_impact_bps",
+        "VWAP 策略需要日内成交量分布曲线：新增 data/intraday_profile.py 模块，提供 VolumeProfile 类，通过 akshare 获取 A 股典型日内成交量分布（30分钟桶），缓存到 ./data/cache/volume_profile.json",
+        "Implementation Shortfall 求解使用简单的解析解（Almgren-Chriss 的 closed-form solution），不需要数值优化——单 CPU 计算 < 10ms",
+        "ExecutionScheduler.execute_schedule(broker, schedule, on_fill_callback) 方法：按 schedule 的时间间隔依次提交子单到 broker，支持暂停（市场异常）和加速（价格有利）",
+        "新增 Order 类型：SLICE（子单），通过 parent_order_id 关联父订单",
+        "TradingEngine 新增 use_scheduler 参数，启用时 process_signal 先调用 ExecutionScheduler.generate_schedule 再执行",
+        "新增 CLI 命令 trading execution-plan --symbol 000001 --quantity 5000 --strategy vwap，输出执行计划表",
+        "Tests pass — test_execution_scheduler.py 包含：TWAP生成10个子单数量相等、VWAP子单量=总量、Implementation Shortfall预期执行价介于arrival price±2%内、schedule内子单时间严格递增、暂停+恢复逻辑不丢单"
+      ],
+      "priority": 2,
+      "passes": false,
+      "dependencies": ["US-Q01"],
+      "notes": "依赖 US-Q01 的 MarketImpactModel 来计算 Implementation Shortfall 的最优轨迹。注意：实盘中执行调度的核心挑战是——子单之间的等待时间需要根据市场反应动态调整（如果价格往有利方向走，加速执行），但初期实现可以先用固定间隔。A 股的 T+1 规则使得卖出执行调度的紧迫性不同于买入（买入后当天不能卖，但卖出后当天可以买）。"
+    },
+    {
+      "id": "US-Q03",
+      "title": "实现交易成本分析面板 (TCA Dashboard)",
+      "description": "作为交易绩效分析者，我需要系统自动分析每笔交易的实际执行质量——执行价格 vs 到达价格 vs VWAP vs 决策价格，分解滑点来源（延迟成本、冲击成本、价差成本）。只有量化了成本，才能优化。当前系统对成交质量完全无记录",
+      "acceptanceCriteria": [
+        "新增 execution/tca.py 模块，提供 TransactionCostAnalyzer 类",
+        "定义 ArrivalPrice（信号触发时的市场价格）、DecisionPrice（策略决策价格）、ExecutionPrice（实际成交均价）、VWAP（当日该股票 VWAP）、Interval_VWAP（执行期间 VWAP）五个基准价格",
+        "TCA 报告包含：(a) Implementation Shortfall = |ExecutionPrice - ArrivalPrice| / ArrivalPrice 分解为 delay_cost（ArrivalPrice 到第一个子单成交价的差值）、impact_cost（第一个子单到最后一个子单的价格漂移）、timing_cost（未执行部分的 opportunity cost）(b) VWAP Slippage = ExecutionPrice / VWAP - 1 (c) 总成本 bps",
+        "每笔订单执行完毕后自动生成 TCA 记录，通过 TCA 数据类持久化到 tca_records 表（SQLite），字段：order_id、symbol、side、quantity、arrival_price、execution_avg_price、vwap、is_bps、delay_bps、impact_bps、created_at",
+        "每周日生成 Weekly TCA Report：按 symbol/strategy/order_side 聚合，输出平均执行成本、成本分布（P25/P50/P75/P95）、环比变化",
+        "新增 CLI 命令 trading tca-report --period this_week，输出周度 TCA 报告（Rich 表格）",
+        "新增 CLI 命令 trading tca-order --order-id PAPER-000001，输出单笔订单 TCA 明细",
+        "Tests pass — test_tca.py 包含：IS分解三项为非负数、VWAP slippage符号方向正确（买单高于VWAP为正slippage、卖单低于VWAP为正slippage）、TCA记录成功写入DB并读取一致、weekly报告包含P25/P50/P75/P95分位数"
+      ],
+      "priority": 3,
+      "passes": false,
+      "dependencies": ["US-Q02"],
+      "notes": "依赖 US-Q02 因为 TCA 需要子单级别的成交记录来做精确的时间序列成本分解。TCA 是连接执行和策略的桥梁——如果 TCA 显示某个策略的 alpha 刚好等于执行成本，那这个策略在实盘中是无效的。TCA 数据也是后续校准 MarketImpactModel 参数 eta/beta/gamma 的基础。"
+    },
+    {
+      "id": "US-Q04",
+      "title": "实现协方差矩阵稳健估计 (Ledoit-Wolf Shrinkage)",
+      "description": "作为组合管理者，我需要一个数值稳定、在样本外表现良好的协方差矩阵估计器。当前系统的仓位管理是每只股票独立计算（PositionSizer.calculate_position_size），不考虑持仓间的相关性。如果你买了茅台和五粮液，实际风险是你以为的两倍",
+      "acceptanceCriteria": [
+        "新增 portfolio/covariance.py 模块，提供 CovarianceEstimator 类",
+        "实现 Ledoit-Wolf 收缩估计：shrinkage_target 使用 constant correlation model（所有股票对的相关性等于平均相关性），shrinkage_intensity 使用 Ledoit-Wolf 解析解（不需要交叉验证，O(1) 计算）",
+        "CovarianceEstimator.estimate(returns_df, method='ledoit_wolf') 返回 pd.DataFrame（协方差矩阵）和 float（shrinkage_intensity），矩阵必须为正定矩阵（最小特征值 > 1e-10）",
+        "同时实现简单方法备选：sample_cov（样本协方差）、exponential_cov（EWMA 加权，half_life=60天），当 returns_df 行数 < 列数*2 时自动强制使用 shrinkage",
+        "新增 CLI 命令 trading covariance --symbols 000001,000858,600519，输出协方差矩阵和相关性矩阵（Rich 热力图）",
+        "每周重新计算一次协方差矩阵（不需要天天算，日度重算反而引入噪声），缓存到 ./data/cache/covariance_{date}.pkl",
+        "Tests pass — test_covariance.py 包含：shrinkage矩阵为正定矩阵（特征值全正）、shrinkage_intensity在[0,1]范围内、shrinkage矩阵的非对角元绝对值<样本矩阵（收缩效果）、当样本数<变量数*2时自动shrinkage"
+      ],
+      "priority": 4,
+      "passes": false,
+      "dependencies": [],
+      "notes": "无依赖，独立开发。Ledoit-Wolf 是协方差估计的黄金标准——计算简单（O(N²) 分析解）、对高维数据稳健、已被业界广泛验证。选择 constant correlation target 是因为：1) 计算最简单 2) 对 A 股这种高相关性市场特别合适 3) 不需要额外的因子模型假设。这个模块是 US-Q05/Q06/Q07 的基础。"
+    },
+    {
+      "id": "US-Q05",
+      "title": "实现均值-方差组合优化 (Markowitz with Constraints)",
+      "description": "作为组合管理者，我需要系统在多只候选股票之间做最优资金分配，而不是每只股票独立算仓位后简单加总。当前系统先单只算仓位，再检查总仓位上限——这是先射箭再画靶",
+      "acceptanceCriteria": [
+        "新增 portfolio/optimizer.py 模块，提供 PortfolioOptimizer 类",
+        "实现标准均值-方差优化：minimize (1/2 * w^T Sigma w - lambda * mu^T w)，支持约束：(a) sum(w) <= max_exposure (总仓位上限，默认 0.95) (b) w_i >= 0 (禁止做空，A 股限制) (c) w_i <= max_single (单股上限，默认 0.25) (d) sum(|w - w_prev|) <= max_turnover (换手率上限，默认 0.30，控制交易成本)",
+        "使用 cvxopt 或 scipy.optimize.minimize 求解，单次优化 < 100ms（10 只股票）",
+        "输入：(a) expected_returns（预期收益向量，来自各策略的 ProbabilisticSignal.expected_return_mean）(b) covariance_matrix（来自 US-Q04）(c) current_weights（当前持仓权重）(d) constraints_dict（约束参数）",
+        "输出 PortfolioAllocation 数据类：weights（最优权重向量）、expected_portfolio_return、expected_portfolio_volatility、sharpe_ratio、diversification_ratio（1 / sum(w_i^2)，衡量分散化程度）",
+        "lambda 参数（风险厌恶系数）的默认值由目标波动率计算：lambda = target_sharpe / target_vol（target_sharpe=1.0, target_vol=0.15 → lambda≈6.67），用户可覆盖",
+        "BacktestEngine 新增 run_portfolio(data_dict, symbols_list) 方法：接收多只股票数据，使用 PortfolioOptimizer 做组合级回测",
+        "新增 CLI 命令 trading optimize-portfolio --symbols 000001,000858,600519,600036,300750，输出最优配置权重",
+        "Tests pass — test_portfolio_optimizer.py 包含：权重向量和=1（全仓约束）、权重全部>=0（不做空约束）、最大单股权重<=0.25、换手约束生效时新旧权重差<0.30、预期夏普>单个股票平均夏普（组合有分散化效果）"
+      ],
+      "priority": 5,
+      "passes": false,
+      "dependencies": ["US-Q04"],
+      "notes": "依赖 US-Q04 提供协方差矩阵。注意：均值-方差优化的 'garbage in, garbage out' 特性——预期收益率是最难估计的参数，协方差相对容易。所以：1) expected_returns 用策略信号而非历史平均 2) 如果信号没有明确收益率预测，用 Black-Litterman 先验（等权均衡收益）3) 换手率约束是关键——不做这个约束，优化器会在每次重新优化时大幅调仓，产生巨大交易成本。"
+    },
+    {
+      "id": "US-Q06",
+      "title": "实现风险平价与分层风险平价 (Risk Parity & HRP)",
+      "description": "作为风险管理者，我需要一个不依赖预期收益率估计的组合配置方法——风险平价（每个资产的 risk contribution 相等）和分层风险平价（Hierarchical Risk Parity）。在预期收益难以估计时，这两个方法比均值-方差更稳健",
+      "acceptanceCriteria": [
+        "新增 portfolio/risk_parity.py 模块，提供 RiskParityOptimizer 和 HRPOptimizer 两个类",
+        "RiskParityOptimizer（标准风险平价）：minimize sum_i (w_i * (Sigma w)_i - 1/N)^2，即每个资产对组合波动率的贡献相等。使用 scipy.optimize 求解，收敛容差 < 1e-8",
+        "HRPOptimizer（分层风险平价，基于 Lopez de Prado 算法）：(a) 用相关系数矩阵计算距离矩阵 D = sqrt(0.5 * (1 - corr)) (b) 对 D 做层次聚类（Ward linkage）(c) 自底向上准对角化协方差矩阵 (d) 递归执行风险平价分配",
+        "两个优化器输入仅需协方差矩阵（不需要预期收益），权重合计 = 1.0，无做空（w_i >= 0）",
+        "输出 PortfolioAllocation 数据类（复用 US-Q05 的数据类）",
+        "新增 CLI 命令 trading risk-parity --symbols 000001,000858,600519,600036,300750 --method hrp，输出 HRP 树状图和最终权重",
+        "新增 CLI 命令 trading risk-parity --method standard --symbols 000001,000858,600519（标准风险平价）",
+        "BacktestEngine 的 run_portfolio 方法新增 method 参数，支持 'markowitz' / 'risk_parity' / 'hrp' 三种方法",
+        "Tests pass — test_risk_parity.py 包含：标准风险平价每个资产的risk contribution相差<5%、HRP权重向量和=1且无空头、HRP的diversification_ratio > 等权重、HRP vs 标准风险平价在合成数据上最大回撤更低（分散化更好）"
+      ],
+      "priority": 6,
+      "passes": false,
+      "dependencies": ["US-Q04"],
+      "notes": "依赖 US-Q04 提供协方差矩阵。HRP (Hierarchical Risk Parity) 是 Marcos Lopez de Prado 提出的方法，比标准风险平价有两个优势：1) 不需要矩阵求逆（仅用聚类+递归，数值更稳定）2) 自然处理资产的层次结构（同一行业的股票自然分配到同一簇）。在 A 股这种行业联动极强的市场，HRP 特别有效。"
+    },
+    {
+      "id": "US-Q07",
+      "title": "实现 A 股统计因子模型 (PCA + 可解释因子)",
+      "description": "作为量化研究员，我需要识别驱动持仓收益的底层因子——是市场 Beta、市值因子、动量因子，还是行业因子？没有因子归因，你就不知道赚的是 alpha 还是 beta，也无法对冲不想承担的风险",
+      "acceptanceCriteria": [
+        "新增 portfolio/factor_model.py 模块，提供 FactorModel 类",
+        "实现两类因子：(a) PCA 统计因子——对收益率矩阵做 PCA，取前 K 个解释 > 80% 方差的成分作为统计因子 (b) 可解释因子——市值因子（对数市值）、动量因子（过去 12-1 个月收益）、波动率因子（过去 60 日波动率倒数）、行业因子（申万一级行业哑变量）",
+        "FactorModel.fit(returns_df, fundamental_df) 方法：先用可解释因子做横截面回归得到因子收益，再对残差做 PCA 提取统计因子，合并为完整因子集合",
+        "FactorModel.get_factor_exposures(portfolio_weights) 返回 FactorExposure 数据类：各个因子的暴露（loading）、贡献收益（因子收益 * 暴露）、特质收益（unexplained）",
+        "输出因子归因报告：收益率 = sum(因子收益_i * 暴露_i) + alpha（特质收益），如果 alpha 占比 < 20%，则策略实质上是因子投资而非 alpha 策略",
+        "新增 CLI 命令 trading factor-exposure --symbols 000001,000858,600519，输出因子暴露矩阵",
+        "新增 CLI 命令 trading factor-returns --period 2025-01，输出各因子的历史累计收益曲线",
+        "支持对冲指定因子：FactorModel.hedge(portfolio_weights, hedge_factors=['market_beta', 'size']) 返回调整后权重（多空组合，净市场暴露为 0）",
+        "Tests pass — test_factor_model.py 包含：市场Beta因子的平均暴露接近1（全市场组合）、PCA前3成分解释方差>60%、对冲market_beta后组合beta<0.05、因子收益序列的VIF（方差膨胀因子）<5（无严重多重共线性）"
+      ],
+      "priority": 7,
+      "passes": false,
+      "dependencies": ["US-Q04"],
+      "notes": "依赖 US-Q04 协方差矩阵用于 PCA 计算的输入。因子模型不是为了做预测——是为了让你知道自己赚的是什么钱。A 股最可靠的可解释因子：1) 市场 Beta 永远最大 2) 小市值效应（A 股极其显著）3) 反转效应（短期反转在 A 股比动量更可靠）4) 低波动异象。注意：因子模型的更新频率是月频（因子收益用月收益率序列），因为日频噪音太大。"
+    },
+    {
+      "id": "US-Q08",
+      "title": "实现协整配对交易引擎",
+      "description": "作为量化交易员，我需要系统自动发现具有协整关系的股票对，并在价差偏离时做多低估股做空高估股。协整配对交易是最经典的统计套利策略，完全不依赖任何预测——只依赖'价差会回归'这个统计假设。当前系统完全没有这个能力",
+      "acceptanceCriteria": [
+        "新增 strategy/pairs_trading.py 模块，提供 PairsTradingStrategy 类，继承 StrategyBase",
+        "实现协整对发现流程：(a) 从候选池（如沪深300成分股）中计算所有股票对的相关系数，只保留 |corr| > 0.7 的对 (b) 对每对做 Engle-Granger 协整检验（p-value < 0.05 为协整）(c) 对协整对计算 hedge_ratio = OLS(y ~ x) 的回归系数 (d) 计算 spread = y - hedge_ratio * x  (e) 保留 ADF test 的 t-stat < -3.0 的对（强协整）",
+        "PairsTradingStrategy.generate_signals(data_dict) 方法：(a) 输入为 {symbol: pd.DataFrame} 的多只股票数据 (b) 对每个已发现的协整对，计算当前 spread 的 z-score = (spread - mean(spread)) / std(spread)，用滚动 60 日 (c) z-score > +2.0 时：SELL y + BUY x（价差过高，预期回归）(d) z-score < -2.0 时：BUY y + SELL x（价差过低，预期回归）(e) z-score 回到 ±0.5 以内平仓",
+        "协整关系每 20 个交易日重新检验一次（协整关系可能随时间衰减），失效的协整对自动移出活跃池",
+        "新增 data/pairs_registry.py 模块，管理已发现的协整对及其历史绩效，持久化到 ./data/pairs/active_pairs.json",
+        "新增 CLI 命令 trading find-pairs --pool hs300，输出所有当前协整的股票对及其 hedge ratio、spread statistics、上次检验日期",
+        "新增 CLI 命令 trading pair-status --pair 000001-000858，输出该协整对的 spread chart（ASCII art 价格走势，终端可展示）",
+        "BacktestEngine 新增 run_pairs(data_dict) 方法，支持配对回测（同时持有两个方向的模拟持仓）",
+        "Tests pass — test_pairs_trading.py 包含：EG协整检验p<0.05的合成数据发现协整关系、非协整对不被发现、z-score到±2.0时生成正确方向信号、协整关系每20天重新检验、失效对自动移除"
+      ],
+      "priority": 8,
+      "passes": false,
+      "dependencies": [],
+      "notes": "无依赖，可独立开发。这是整个系统最可能产生正 alpha 的纯统计模块。为什么协整有效？因为同一行业/同一产业链的两只股票，基本面驱动因素高度相似，如果短期价格偏离太远，大概率会回归。A 股特别适合协整策略的原因：散户占比高导致短期定价偏差大，但基本面关联最终会拉回。注意：协整不等于相关性——协整是长期均衡关系，相关性只是同涨同跌。"
+    },
+    {
+      "id": "US-Q09",
+      "title": "实现隐马尔可夫模型 (HMM) 市场状态识别",
+      "description": "作为策略开发者，我需要比 50 日均线+ADX 更精确的市场状态识别方法。HMM 是一种纯统计方法——不需要标签数据、不需要深度学习、计算极快、输出可解释（隐藏状态+转移概率）。当前 detect_state() 用 50 日均线斜率分牛熊——粗糙到几乎没有信息量",
+      "acceptanceCriteria": [
+        "新增 ml/hmm_regime.py 模块（注：虽在 ml/ 目录下但 HMM 是纯统计算法，不涉及深度学习），提供 HMMRegimeDetector 类",
+        "使用 hmmlearn 库的 GaussianHMM 实现，n_components=3（对应三种隐藏状态，不做先验标签预设），covariance_type='full'",
+        "输入特征（6维）：5日收益率、20日收益率、5日波动率（日收益rolling std）、20日波动率、5日收益率与20日收益率之差（趋势强度）、上涨家数占比（通过 akshare 获取沪深京上涨/下跌家数）",
+        "训练频率：每 60 个交易日重新训练一次，使用 walk-forward 滚动训练（只用训练日之前的数据）",
+        "训练数据量：至少 500 个交易日的历史数据用于首次训练",
+        "HMMRegimeDetector.predict_state(features_df) 返回 dict：current_regime（当前最可能的隐藏状态编号 0/1/2）、state_probabilities（3 个状态的概率向量）、regime_characteristics（自动标注：计算每个状态下历史平均收益和波动率来识别'牛市/熊市/震荡'标签）",
+        "StrategyBase 新增 set_regime(regime_dict) 方法和 current_regime 属性，策略可选使用 HMM 状态替代 MarketState 枚举——策略不改，只增强输入",
+        "新增 CLI 命令 trading hmm-state --index 000300，输出当前 HMM 状态概率和状态特征",
+        "HMM 模型文件保存路径 ./data/models/hmm/hmm_model_{date}.pkl",
+        "Tests pass — test_hmm_regime.py 包含：3状态GaussianHMM可正常训练、预测输出3个状态概率和为1±0.01、特征维度=6、walk-forward训练仅用历史数据（无前视偏差）、MarketState枚举回退机制在hmm不可用时正常工作"
+      ],
+      "priority": 9,
+      "passes": false,
+      "dependencies": [],
+      "notes": "无依赖，可独立开发。hmmlearn 是一个轻量库（纯 scikit-learn 兼容，无 DL 依赖），HMM 训练 500 天数据 < 1 秒。HMM 的核心优势：不仅告诉你'当前是什么状态'，还告诉你'转移到其他状态的概率'——信号可以据此调整激进程度（如果从牛市转移到熊市的概率在上升，自动减仓）。注意：HMM 状态不预设标签——训练输出可能是 [状态0: '高收益低波动', 状态1: '负收益高波动', 状态2: '低收益低波动']，用实际统计特征标注。"
+    },
+    {
+      "id": "US-Q10",
+      "title": "实现 PCA 统计套利策略 (Statistical Arbitrage via PCA)",
+      "description": "作为量化交易员，我需要使用 PCA 提取的统计因子来构建市场中性的多空组合。PCA 能从价格数据中自动发现系统性的协动模式（不需要定义'行业'或'因子'），然后做多相对因子折价的股票、做空溢价的股票。这是纯数据驱动的统计套利",
+      "acceptanceCriteria": [
+        "新增 strategy/pca_arbitrage.py 模块，提供 PCAArbitrageStrategy 类，继承 StrategyBase",
+        "使用 sklearn.decomposition.PCA（n_components=5，保留前 5 个主成分）对候选股票池的标准化日收益率矩阵做 PCA 分解",
+        "对于每只股票，用前 K 个主成分做 OLS 回归得到 predicted_return，实际收益率 - predicted_return = residual_return（特质收益）",
+        "信号逻辑：(a) 对过去 20 日累积特质收益 z-score > +2.0 → SELL（最近表现远超 PCA 预期，可能过度高估）(b) z-score < -2.0 → BUY（最近表现远弱于 PCA 预期，可能过度低估）(c) 组合层面要求净 dollar exposure = 0（多空平衡，市场中性）",
+        "因子更新频率：每 60 个交易日重新做一次 PCA 分解（统计因子结构相对稳定，不需要天天重算）",
+        "注意：PCA 的输入必须是标准化收益率（每只股票减均值除标准差），否则大波动股票会主导主成分",
+        "组合层面的多空平衡：计算所有信号的 net exposure = sum(BUY notional) - sum(SELL notional)，如果 |net exposure| > 总资产的 5% 则按比例缩放空头/多头信号量",
+        "新增 CLI 命令 trading pca-arbitrage --pool hs300 --date 2025-01-15，输出当日 PCA 套利信号（哪些 BUY 哪些 SELL）",
+        "Tests pass — test_pca_arbitrage.py 包含：前5个PCA成分累积解释方差>40%、特质收益=实际收益-预测收益（残差检验）、BUY信号的特质收益均值<0、SELL信号的特质收益均值>0、净exposure缩放后<5%"
+      ],
+      "priority": 10,
+      "passes": false,
+      "dependencies": [],
+      "notes": "无依赖，可独立开发。PCA 统计套利的底层逻辑：市场的绝大部分波动由少数几个系统因子驱动（PCA 前 3-5 个成分通常解释 > 40% 方差），如果你的持仓在这些因子上的暴露被对冲了，剩下的就是特质波动——而特质波动在横截面上具有 '反转' 特性（涨多了回跌、跌多了回涨）。A 股尤其适合这个策略，因为散户驱动的定价偏差大。"
+    },
+    {
+      "id": "US-Q11",
+      "title": "实现卡尔曼滤波动态对冲比率 (Kalman Filter Dynamic Hedge Ratio)",
+      "description": "作为配对交易员，我需要用卡尔曼滤波器实时估计协整对的对冲比率（hedge ratio），而不是用固定的 OLS 回归系数。协整关系中 hedge ratio 本身就是时变的（两只股票的相对估值会随时间漂移），固定 hedge ratio 会导致 spread 估计偏差",
+      "acceptanceCriteria": [
+        "新增 ml/kalman_filter.py 模块（注：卡尔曼滤波是纯状态空间模型，非 DL），提供 KalmanHedgeRatio 类",
+        "状态空间模型定义：观测方程 y_t = x_t * beta_t + eps_t（x 是自变量价格，beta_t 是时变 hedge ratio），状态方程 beta_t = beta_{t-1} + eta_t（随机游走），eps_t ~ N(0, sigma_obs), eta_t ~ N(0, sigma_state)",
+        "使用 pykalman 库或自实现卡尔曼滤波（一维状态，公式极简——predict+update 两步，O(1) 每次更新），自实现版本代码 < 30 行",
+        "KalmanHedgeRatio.update(y, x) 方法：输入最新的 y 和 x 价格，更新 beta（hedge ratio）的估计值和估计方差",
+        "输出 HedgeRatioEstimate 数据类：beta（当前最优 hedging 比率）、beta_std（估计不确定性，用于判断 hedge ratio 是否显著偏离 1.0）",
+        "在 US-Q08 PairsTradingStrategy 中集成：用 KalmanHedgeRatio 替代固定 OLS hedge_ratio（当 method='kalman' 时——configurable），spread = y - beta * x 也是动态的",
+        "新增 CLI 命令 trading kalman-hedge --pair 000001-000858 --period 2025-01，输出动态 hedge ratio 的时间序列",
+        "Tests pass — test_kalman_filter.py 包含：一维卡尔曼滤波predict+update收敛（beta_std递减）、动态beta能追踪合成数据中的线性漂移、自实现版本与pykalman库结果差异<5%、beta估计方差在稳态<0.01"
+      ],
+      "priority": 11,
+      "passes": false,
+      "dependencies": ["US-Q08"],
+      "notes": "依赖 US-Q08 的配对交易框架，卡尔曼滤波作为动态 hedge ratio 的增强。自实现卡尔曼滤波的好处：无外部依赖、完全可控、代码量极少（~30 行）。卡尔曼滤波在这里的应用极其自然——hedge ratio 本身就是'隐藏状态'，我们通过观测价格来推断它。注意：如果卡尔曼滤波估计的 beta_std 突然变大（不确定性增加），说明协整关系可能正在瓦解——这是重要的风险预警信号。"
+    },
+    {
+      "id": "US-Q12",
+      "title": "实现日内多频率 K 线支持 (30min/60min Bars)",
+      "description": "作为策略开发者，我需要系统支持日内的 30 分钟和 60 分钟 K 线数据，而不仅仅是日线。很多 alpha 存在于日内模式中——开盘半小时的反转、午盘前的动量衰减、尾盘的拉升。只做日线等于放弃了一半的可用信号",
+      "acceptanceCriteria": [
+        "新增 data/intraday.py 模块，提供 IntradayDataSource 抽象基类和 AKShareIntradaySource 实现",
+        "AKShareIntradaySource 通过 akshare.stock_zh_a_hist_min_em(symbol, period='30') 获取 30 分钟 K 线，period 支持 '5'/'15'/'30'/'60'（5/15/30/60 分钟）",
+        "DataStore 新增 fetch_intraday(symbol, period='30', days_back=20, source='akshare') 方法，返回 pd.DataFrame（标准化 OHLCV 列，index=datetime），缓存 TTL=5 分钟（日内数据变化快）",
+        "所有 StrategyBase.generate_signals(data) 方法对输入数据的频率透明——不管是日线还是 30 分钟线，接口不变。但在 30 分钟 K 线上生成信号后，BacktestEngine 需要知道频率是 '30min' 而非 'daily'：BacktestEngine 新增 freq 参数",
+        "TradingEngine.run_loop() 在交易时段内按频率轮询：日线=每天盘中轮询一次，30分钟=每30分钟轮询一次（但仅在 trading_time 内）",
+        "MarketAnalyzer.calculate_indicators 在非日线数据上自动调整窗口参数——例如 SMA_20 在 30 分钟 K 线上 = 20 * 8 = 160 个 bar（每天 8 根 30 分钟 K 线）",
+        "新增 Overnight 收益分解：daily_return = overnight_return（收盘→次日开盘）+ intraday_return（开盘→收盘），存储到 PriceData 模型",
+        "新增 CLI 命令 trading intraday --symbol 000001 --period 30min --days 5，输出最近 5 天 30 分钟 K 线摘要",
+        "Tests pass — test_intraday.py 包含：30分钟K线数据8根bar/天（2h交易*2）、60分钟K线4根bar/天、fetch_intraday按缓存TTL过期自动刷新、非日线SMA参数自动缩放（SMA20在30min上=160bar窗口）、overnight+intraday=全天的daily_return（误差<0.001）"
+      ],
+      "priority": 12,
+      "passes": false,
+      "dependencies": [],
+      "notes": "无依赖。频率透明的设计要求策略代码不用修改——但如果策略中有硬编码的 'days' 概念（如 max_holding_days=30），在 30 分钟 K 线上需要映射为 bar 数（30 天 * 8 bars/天 = 240 bars）。Overnight 收益分解对 A 股尤其重要——A 股有大量隔夜跳空（重大政策往往在收盘后发布），区分 overnight alpha 和 intraday alpha 能帮助你理解策略真正在赚什么钱。"
+    },
+    {
+      "id": "US-Q13",
+      "title": "实现订单簿不平衡与流动性信号",
+      "description": "作为短线交易员，我需要从 Level 1 行情数据中提取订单簿买卖力道的失衡信号。这不是高频做市——只需要 Level 1 的 bid/ask volume 数据，计算简单的买方力量 vs 卖方力量指标。当日 level 1 数据完全免费且足以产生短线 alpha",
+      "acceptanceCriteria": [
+        "新增 ml/microstructure.py 模块，提供 OrderBookSignalExtractor 类",
+        "通过 akshare.stock_zh_a_tick_tx(symbol) 获取逐笔交易数据（或 stock_zh_a_tick_js），构建虚拟订单簿信号（Lee-Ready 算法：成交价 ≥ ask → 买方主动，成交价 ≤ bid → 卖方主动）",
+        "计算三个信号：(a) Volume Imbalance = (buy_volume - sell_volume) / (buy_volume + sell_volume)，滚动 20 笔 (b) Trade Size Imbalance = (avg_buy_size - avg_sell_size) / (avg_buy_size + avg_sell_size)，大单方向暗示聪明钱方向 (c) Tick Direction = % of upticks（价格上涨的成交笔数占比）",
+        "OrderBookSignalExtractor.extract(tick_data) 返回 OrderBookSignal 数据类：volume_imbalance、trade_size_imbalance、tick_direction、composite_score（三项的加权平均，[-1, +1]，正值=买方力量强）、timestamp",
+        "信号聚合到 K 线级别：每根 30 分钟 K 线内的 tick 信号取均值作为该 bar 的 microstructure_signal",
+        "新增 CLI 命令 trading tick-analysis --symbol 000001，输出最新 tick 数据的买卖力量分析",
+        "注意：akshare 的 tick 级数据有频率限制（不是真正的逐笔），且历史数据获取有限——这个信号的实用场景是用最近 N 个 tick 做盘中实时判断，而非历史回测。历史回测时使用当日日内的 aggregated tick 统计",
+        "Tests pass — test_microstructure.py 包含：volume_imbalance范围[-1,1]、全买盘时composite_score>0.8、全卖盘时<-0.8、Lee-Ready算法正确分类买卖方向（模拟数据中）、tick信号能正确聚合到K线级别"
+      ],
+      "priority": 13,
+      "passes": false,
+      "dependencies": ["US-Q12"],
+      "notes": "依赖 US-Q12 的日内 K 线框架，因为微观结构信号最适合和 30 分钟 K 线配合使用。Lee-Ready 算法是最经典的 tick 分类算法——简单、无参数、业界标准。注意：这不是高频交易（不需要 colocation/FPGA），这是在分钟级别的信号增强。即使只有 Level 1 数据（bid/ask price + volume），也足够构建有价值的短线 alpha。对于回测验证——tick 信号的 out-of-sample 测试比技术分析信号更可靠，因为微观结构在统计上更稳健。"
+    },
+    {
+      "id": "US-Q14",
+      "title": "实现时变波动率预测 (GARCH / EWMA)",
+      "description": "作为风险管理者和期权定价者，我需要比 20 日滚动标准差更准确的波动率预测。当前 estimate_volatility 用简单历史 std——这在波动率突变时反应极慢。GARCH 模型能捕捉波动率聚类（大波动后跟着大波动），EWMA 能更快响应最近的波动率变化",
+      "acceptanceCriteria": [
+        "新增 ml/volatility.py 模块（纯统计计量），提供 VolatilityForecaster 类",
+        "实现三种波动率预测：(a) EWMA（指数加权移动平均）: sigma_t^2 = lambda * sigma_{t-1}^2 + (1-lambda) * r_{t-1}^2，lambda=0.94 (RiskMetrics 标准) (b) GARCH(1,1): sigma_t^2 = omega + alpha * r_{t-1}^2 + beta * sigma_{t-1}^2，使用 MLE 估计参数或 arch 库 (c) Realized Volatility（日内高频实现波动率，仅在有日内数据时可用）: RV = sqrt(sum(r_intraday_i^2))，用 5 分钟收益率",
+        "VolatilityForecaster.forecast(returns, method='garch', horizon=5) 返回 dict：current_daily_vol、forecast_vol_{1d}..forecast_vol_{5d}（未来 1-5 天的波动率预测），prediction_intervals（90% 置信区间）",
+        "EWMA 方法不需要参数估计，O(1) 计算，作为默认方法（最稳健）",
+        "GARCH 使用 arch 库（轻量，非 DL），训练 < 100ms 在 500 个数据点上",
+        "PositionSizer 新增 use_vol_forecast 参数，启用时用 VolatilityForecaster 的 forecast_vol 替代 estimate_volatility 来计算 vol_multiplier",
+        "RiskManager 新增 vol_alert 功能：当 VolatilityForecaster 预测未来 5 天波动率 > 历史 95th percentile 时，标记 '高波动预警' 并自动降低仓位乘数",
+        "新增 CLI 命令 trading vol-forecast --symbol 000001 --method garch，输出未来 5 天波动率预测曲线（ASCII 图表）",
+        "Tests pass — test_volatility.py 包含：EWMA vol > simple std vol on regime change（EWMA更快响应突变）、GARCH参数omega+alpha+beta中beta>0.7（波动率持续性高是普遍现象）、vol_alert在predicted_vol>hist_95pct时触发、PositionSizer use_vol_forecast=True时仓位=forecast_vol喂入的vol_mult"
+      ],
+      "priority": 14,
+      "passes": false,
+      "dependencies": [],
+      "notes": "无依赖。波动率预测对仓位管理的影响远超你的直觉——如果实际波动率是 30% 但你只用 20% 的历史平均波动率来算仓位，你会低估实际风险 50%。EWMA 几乎零计算成本但比简单历史 std 灵敏得多——建议作为默认替换。GARCH 的 '波动率持续性' 特性在 A 股非常显著（暴涨暴跌往往连续出现），因此 GARCH 预测在极端行情中能提前预警。"
+    },
+    {
+      "id": "US-Q15",
+      "title": "实现 Deflated Sharpe Ratio / Haircut Sharpe 和统计显著性检验",
+      "description": "作为策略验证者，我需要知道策略的 Sharpe Ratio 在统计上是否显著——在尝试了 1000 种参数组合后，最高 Sharpe 的那个策略可能只是随机噪声。Deflated Sharpe Ratio 和 Haircut Sharpe Ratio 是业界标准的方法，用来纠正多重测试偏差。当前系统完全没有策略的统计显著性检验",
+      "acceptanceCriteria": [
+        "新增 backtest/significance.py 模块，提供 StrategySignificanceTester 类",
+        "实现 Deflated Sharpe Ratio (DSR)：(a) DSR = (SR - E[max(SR)]) / std(max(SR))，其中 E[max(SR)] 和 std(max(SR)) 是通过 Monte Carlo 模拟在相同的试验次数下随机策略的 Sharpe 分布的期望和标准差 (b) DSR > 2.0 → 策略在多重测试校正后仍显著 (c) DSR > 3.0 → 高度显著",
+        "Monte Carlo 模拟参数：n_simulations=2000（模拟 2000 组随机策略）、n_trials=实际尝试的参数组合数（来自 US-026 optimizer 的记录），每次模拟生成 n_trials 长度的随机收益序列（正态分布，零均值），计算每组随机序列的 Sharpe，构建 null distribution",
+        "同时实现 Haircut Sharpe Ratio (HSR)：HSR = SR * (1 - correction_factor)，correction_factor 基于 n_trials 和数据的 sample size，公式参考 Harvey & Liu (2015)",
+        "StrategySignificanceTester.test(strategy_returns, benchmark_returns, n_trials) 返回 SignificanceReport 数据类：sharpe_ratio、deflated_sharpe、haircut_sharpe、monthly_alpha_t_stat、significance_level（'NOT SIGNIFICANT'/'WEAK' (DSR>1.5)/'SIGNIFICANT' (DSR>2.0)/'HIGHLY SIGNIFICANT' (DSR>3.0)）",
+        "BacktestEngine.walk_forward() 方法在所有窗口完成后自动调用 StrategySignificanceTester.test()，在 walk-forward 报告底部追加显著性结果",
+        "新增 CLI 命令 trading test-significance --strategy trend_following --n-trials 50，输出 Deflated Sharpe 等显著性指标",
+        "Tests pass — test_significance.py 包含：纯噪声策略DSR<0（不显著）、高Sharpe+大n_trials时DSR显著低于原始Sharpe（Haircut效应）、Monte Carlo n_simulations=2000在<5s内完成（CPU）、DSR>2.0判定显著、n_trials=1时DSR≈SR（单次不需要校正）"
+      ],
+      "priority": 15,
+      "passes": false,
+      "dependencies": ["US-026"],
+      "notes": "依赖 US-026 的 StrategyOptimizer 来获取实际尝试的参数组合数（n_trials）。这是整个系统'严谨性'的最后一道防线——一个 Sharpe=2.0 的策略如果是在试了 500 组参数后发现的，Deflated Sharpe 可能只有 0.8，完全不显著。这个模块强制你在回测报告底部看到真实的风险调整后绩效。2000 次 Monte Carlo 是一个适中的数字——在 Python 中应该 < 5 秒。"
+    },
+    {
+      "id": "US-Q16",
+      "title": "实现概率加权回测与交易成本精细建模",
+      "description": "作为回测验证者，我需要回测引擎使用概率信号（ProbabilisticSignal）而非确定信号（Signal）来模拟真实的交易决策——当 win_probability=0.55 时，不是 100% 交易，而是 55% 的概率交易。同时集成 US-001/002/003 的 A 股规则 + US-Q01 的市场冲击模型到一次完整的成本精细回测中。将第 1-3 阶段的成本收益关系可视化",
+      "acceptanceCriteria": [
+        "BacktestEngine 新增 run_probabilistic_montecarlo(data, symbol, n_paths=500) 方法：(a) 使用 US-E02 (ProbabilisticSignal) 的 win_probability 做随机决策——对每个信号产生一个 uniform(0,1) 随机数，仅当 random < signal.win_probability 时执行交易 (b) 重复 n_paths=500 次，每次用不同的随机数种子 (c) 输出 MonteCarloResult 数据类：所有路径的 equity_curve 均值（带 90% 置信区间 band）、final_equity 分布（P10/P25/P50/P75/P90）、prob_of_loss（最终亏损的概率）、expected_sharpe（所有路径 Sharpe 的均值）",
+        "同一次 run_probabilistic_montecarlo 调用中，集成完整成本模型：(a) A 股真实交易成本（US-003 的 AShareCostCalculator）(b) T+1 限制（US-001）(c) 涨跌停校验（US-002）(d) 市场冲击成本（US-Q01 的 MarketImpactModel）",
+        "输出成本归因分析：信号收益（如果无成本的 hypothetical return）、减去佣金+印花税后的 net_return、减去冲击成本后的 realized_return（通常在 net_return 上再减 5-20bps，取决于订单规模）",
+        "Monte Carlo 单个路径回测速度：1000 个交易日 + 50 笔交易 < 100ms，500 个路径 < 50s（可并行——multiprocessing 使用 4 核心 → < 15s）",
+        "BacktestResult 新增 prob_montecarlo 字段（MonteCarloResult 类型的实例），通过 summary() 可直接获取",
+        "新增 CLI 命令 trading backtest-mc --symbol 000001 --strategy trend_following --n-paths 500，输出 Monte Carlo 回测结果（equity curve band、最终收益率分布、亏损概率等）",
+        "Tests pass — test_montecarlo_backtest.py 包含：win_prob=0.5时大约50%路径执行交易（二项分布检验，n=500下±3σ内）、最终equity的P50≈原始回测结果（当impact model关闭时）、冲击成本在开启impact model时使得realized_return<net_return、prob_of_loss在Sharpe>1时<20%、500路径并行加速比≥2x（4核）"
+      ],
+      "priority": 16,
+      "passes": false,
+      "dependencies": ["US-E02", "US-Q01"],
+      "notes": "依赖 US-E02 的 ProbabilisticSignal（win_probability）和 US-Q01 的 MarketImpactModel。这是一个综合性的回测增强——它试图回答'如果所有的不确定性（信号不确定性+成本不确定性）都被考虑进去，策略的真实期望收益是多少？'。这比单一的点估计（传统回测）更能反映策略的实际表现。500 路径建议作为默认——在统计上有足够的 convergence（Monte Carlo 误差 ~ 1/sqrt(500) ≈ 4.5%）。并行建议用 multiprocessing.Pool 而非 threading（Python GIL 限制）。"
+    }
+  ]
+}

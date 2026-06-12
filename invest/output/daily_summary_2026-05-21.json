@@ -1,0 +1,51 @@
+{
+  "date": "2026-05-21",
+  "generated_at": "2026-05-21T18:01:50.349243",
+  "elapsed_seconds": 50.6,
+  "market_summary": {
+    "北向资金": "数据获取失败",
+    "市场情绪": "正常",
+    "生成时间": "2026-05-21 18:01"
+  },
+  "statistics": {
+    "total_decisions": 5,
+    "buy_decisions": 0,
+    "sell_decisions": 2,
+    "hold_decisions": 3,
+    "avg_fusion_confidence": 0.301,
+    "avg_scorer_score": 46.5
+  },
+  "top_10_buy": [],
+  "top_10_scored": [
+    {
+      "symbol": "000001",
+      "name": "平安银行",
+      "score": 49.34,
+      "rating": "观望"
+    },
+    {
+      "symbol": "000006",
+      "name": "深振业Ａ",
+      "score": 48.34,
+      "rating": "观望"
+    },
+    {
+      "symbol": "000002",
+      "name": "万  科Ａ",
+      "score": 46.34,
+      "rating": "观望"
+    },
+    {
+      "symbol": "000007",
+      "name": "全新好",
+      "score": 44.34,
+      "rating": "观望"
+    },
+    {
+      "symbol": "000008",
+      "name": "神州高铁",
+      "score": 44.34,
+      "rating": "观望"
+    }
+  ]
+}
