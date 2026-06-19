@@ -1,21 +1,34 @@
 # Agent 设计模式文档集
 
-本仓库系统性地整理了 **10 大类、51 种** Agent 设计模式，每种模式均配有概念说明、核心流程图和完整的 Python 示例代码。
+本仓库系统性地整理了 **12 大类、93 种** Agent 设计模式，每种模式均配有概念说明、核心流程图和完整的 Python 示例代码。
+
+> 📖 **不知道该选哪个模式？** 请先阅读 [**场景适配指南**](docs/场景适配指南.md) — 包含快速选型决策树、10 个典型场景详解、9 大行业方案、8 个经典组合配方。
 
 ## 📚 文档目录
 
 | 序号 | 类别 | 模式数量 | 文档 |
 |:---:|------|:------:|------|
-| 01 | 推理增强类 | 8 | [01_推理增强类.md](docs/01_推理增强类.md) |
-| 02 | 自主规划与执行类 | 5 | [02_自主规划与执行类.md](docs/02_自主规划与执行类.md) |
-| 03 | 检索增强类 (RAG) | 5 | [03_检索增强类.md](docs/03_检索增强类.md) |
-| 04 | 多智能体协作类 | 6 | [04_多智能体协作类.md](docs/04_多智能体协作类.md) |
-| 05 | 记忆与状态管理类 | 4 | [05_记忆与状态管理类.md](docs/05_记忆与状态管理类.md) |
-| 06 | 框架与编程范式类 | 5 | [06_框架与编程范式类.md](docs/06_框架与编程范式类.md) |
-| 07 | 安全与对齐类 | 5 | [07_安全与对齐类.md](docs/07_安全与对齐类.md) |
-| 08 | 工具使用与函数调用类 | 5 | [08_工具使用与函数调用类.md](docs/08_工具使用与函数调用类.md) |
-| 09 | 自我纠错与迭代改进类 | 4 | [09_自我纠错与迭代改进类.md](docs/09_自我纠错与迭代改进类.md) |
+| 01 | 推理增强类 | 15 | [01_推理增强类.md](docs/01_推理增强类.md) |
+| 02 | 自主规划与执行类 | 8 | [02_自主规划与执行类.md](docs/02_自主规划与执行类.md) |
+| 03 | 检索增强类 (RAG) | 11 | [03_检索增强类.md](docs/03_检索增强类.md) |
+| 04 | 多智能体协作类 | 9 | [04_多智能体协作类.md](docs/04_多智能体协作类.md) |
+| 05 | 记忆与状态管理类 | 6 | [05_记忆与状态管理类.md](docs/05_记忆与状态管理类.md) |
+| 06 | 框架与编程范式类 | 8 | [06_框架与编程范式类.md](docs/06_框架与编程范式类.md) |
+| 07 | 安全与对齐类 | 10 | [07_安全与对齐类.md](docs/07_安全与对齐类.md) |
+| 08 | 工具使用与函数调用类 | 8 | [08_工具使用与函数调用类.md](docs/08_工具使用与函数调用类.md) |
+| 09 | 自我纠错与迭代改进类 | 5 | [09_自我纠错与迭代改进类.md](docs/09_自我纠错与迭代改进类.md) |
 | 10 | 人机协作类 | 4 | [10_人机协作类.md](docs/10_人机协作类.md) |
+| 11 | 评估与测试类 | 4 | [11_评估与测试类.md](docs/11_评估与测试类.md) |
+| 12 | 可观测性与成本优化类 | 5 | [12_可观测性与成本优化类.md](docs/12_可观测性与成本优化类.md) |
+| — | **场景适配指南** | — | [场景适配指南.md](docs/场景适配指南.md) |
+| — | 🏯 模式江湖（趣味图鉴） | 93 | [模式江湖.md](docs/模式江湖.md) |
+| — | 🛒 电商/零售行业方案 | 3 | [行业方案_电商零售.md](docs/行业方案_电商零售.md) |
+| — | 🏦 金融行业方案 | 3 | [行业方案_金融.md](docs/行业方案_金融.md) |
+| — | 💼 SaaS/企业服务行业方案 | 3 | [行业方案_SaaS企业服务.md](docs/行业方案_SaaS企业服务.md) |
+| — | 🏥 医疗健康行业方案 | 3 | [行业方案_医疗健康.md](docs/行业方案_医疗健康.md) |
+| — | 🎓 教育行业方案 | 3 | [行业方案_教育.md](docs/行业方案_教育.md) |
+| — | ⚖️ 法律行业方案 | 3 | [行业方案_法律.md](docs/行业方案_法律.md) |
+| — | 🏭 制造行业方案 | 3 | [行业方案_制造.md](docs/行业方案_制造.md) |
 
 ## 🗺️ 模式全景图
 
@@ -25,49 +38,78 @@ Agent 设计模式
 │   ├── CoT (思维链)          ├── ToT (思维树)
 │   ├── GoT (思维图)          ├── Self-Consistency (自洽性)
 │   ├── PoT (程序化思维)      ├── Step-Back (退一步提示)
-│   ├── Least-to-Most (从易到难)  └── Analog Prompting (类比提示)
+│   ├── Least-to-Most (从易到难)  ├── Analog Prompting (类比提示)
+│   ├── SoT (骨架思维)        ├── RE2 (重复阅读)
+│   ├── S2A (系统2注意力)     ├── Emotion Prompting (情感提示)
+│   ├── LATS (语言智能体树搜索)
+│   └── Test-Time Compute Scaling (测试时计算扩展/o1)
 │
 ├── 自主规划与执行类 — 让Agent自主制定计划并执行
 │   ├── AutoGPT / BabyAGI     ├── HuggingGPT / TaskMatrix
 │   ├── DEPS                  ├── ART
-│   └── ADaPT
+│   ├── ADaPT                 ├── Plan-and-Solve (计划与求解)
+│   ├── LLM+P (LLM+经典规划器) └── ReWOO (推理与观察解耦)
 │
 ├── 检索增强类 (RAG) — 何时检索、检索什么、如何利用
 │   ├── Standard RAG          ├── Self-RAG
 │   ├── Corrective RAG        ├── RAISE
-│   └── Active RAG
+│   ├── Active RAG            ├── GraphRAG (知识图谱RAG)
+│   ├── HyDE (假设文档嵌入)   ├── Self-Ask (自问自答)
+│   ├── FLARE (前瞻式主动检索)
+│   ├── Speculative RAG (推测式RAG)
+│   └── Adaptive RAG (自适应RAG)
 │
 ├── 多智能体协作类 — 多Agent交互获得更高质量产出
 │   ├── AutoGen               ├── MetaGPT
 │   ├── CrewAI                ├── MoA (混合Agent)
-│   ├── MAD (多Agent辩论)     └── DyLAN (动态Agent网络)
+│   ├── MAD (多Agent辩论)     ├── DyLAN (动态Agent网络)
+│   ├── OpenAI Swarm (轻量编排) ├── ChatDev (聊天驱动开发)
+│   └── A2A Protocol (Agent间通信协议)
 │
 ├── 记忆与状态管理类 — 让Agent"记住该记住的、忘掉该忘掉的"
 │   ├── MemGPT                ├── Generative Agents
-│   ├── Reflection-based Memory   └── RAG-based Memory
+│   ├── Reflection-based Memory   ├── RAG-based Memory
+│   ├── Episodic Memory (情景记忆)
+│   └── Letta (MemGPT演进/有状态Agent)
 │
 ├── 框架与编程范式类 — 从系统架构层面组织LLM调用
 │   ├── DSPy                  ├── Flow Engineering (LangGraph)
 │   ├── Map-Reduce Pattern    ├── Router / MoE
-│   └── Structured Output
+│   ├── Structured Output     ├── MCP (模型上下文协议)
+│   ├── Semantic Kernel       └── Prompt Chaining (提示链)
 │
 ├── 安全与对齐类 — 确保Agent输出安全、合规、符合价值观
 │   ├── Constitutional AI     ├── Guardrails / NeMo-Guardrails
 │   ├── LLM-as-a-Judge       ├── Self-Alignment
-│   └── RLHF-aware Design
+│   ├── RLHF-aware Design     ├── Red Teaming (红队测试)
+│   ├── Prompt Injection Defense  ├── Jailbreak Defense
+│   ├── DPO & RLAIF (直接偏好优化与AI反馈对齐)
+│   └── Llama Guard (输入输出安全分类)
 │
 ├── 工具使用与函数调用类 — Agent区别于普通LLM的核心能力
 │   ├── ReAct                 ├── Function Calling
 │   ├── Toolformer            ├── Code Interpreter
-│   └── API Agent / Web Agent
+│   ├── API Agent / Web Agent ├── Computer Use / GUI Agent
+│   ├── Parallel Function Calling
+│   └── Structured Outputs (结构化输出)
 │
 ├── 自我纠错与迭代改进类 — 从"能用"到"可靠"的关键
 │   ├── Self-Refine           ├── Reflexion
-│   ├── CRITIC                └── Iterative Refinement
+│   ├── CRITIC                ├── Iterative Refinement
+│   └── Self-Discover (自我发现推理结构)
 │
-└── 人机协作类 — 生产系统的必备机制
-    ├── Human-in-the-Loop     ├── Interactive Agent
-    ├── Cobots                └── Supervised Autonomy
+├── 人机协作类 — 生产系统的必备机制
+│   ├── Human-in-the-Loop     ├── Interactive Agent
+│   ├── Cobots                └── Supervised Autonomy
+│
+├── 评估与测试类 — 让Agent质量可衡量、可验证
+│   ├── LLM-as-a-Judge        ├── Pairwise Comparison
+│   ├── Trajectory Evaluation └── Adversarial Testing
+│
+└── 可观测性与成本优化类 — 生产环境的"看得见、控得住、省得了"
+    ├── Tracing & Logging     ├── Token & Cost Monitoring
+    ├── Caching & Memoization ├── Model Routing & Cascading
+    └── Prompt Caching & Batch API (提示缓存与批量API)
 ```
 
 ## 📖 推荐阅读顺序
@@ -88,6 +130,10 @@ Agent 设计模式
 9. **07 安全与对齐类** → 理解安全保障
 10. **10 人机协作类** → 理解生产环境部署
 
+### 生产路径（上线与运维）
+11. **11 评估与测试类** → 理解如何评估和验证 Agent 质量
+12. **12 可观测性与成本优化类** → 理解生产环境的监控与成本控制
+
 ## ⚙️ 环境配置
 
 所有示例代码基于 OpenAI Python SDK：
@@ -107,6 +153,15 @@ export OPENAI_BASE_URL="https://your-api-endpoint"
 部分模式需要额外依赖：
 - AutoGen 示例：`pip install pyautogen`
 - 向量检索示例：内置 `SimpleVectorStore`，无需额外安装
+- 语义缓存示例（12.3）：依赖 `numpy`（已包含在基础安装中）
+- 链路追踪示例（12.1）：可选集成 OpenTelemetry 用于生产环境
+
+> ⚠️ **生产环境注意事项**：本文档中的示例代码为教学目的编写，省略了生产环境必需的错误处理（如 API 限流重试、超时处理、网络异常恢复等）。生产部署时请务必：
+> - 对所有 LLM 调用添加 `try/except`，捕获 `openai.RateLimitError`、`openai.APIError`、`openai.APITimeoutError` 等
+> - 实现指数退避重试机制（推荐使用 `tenacity` 库）
+> - 对 `response.choices[0].message.content` 做 None 防护（`content or ""`）
+> - 对 `json.loads` 做 try/except 兜底，处理 LLM 返回非标准 JSON 的情况
+> - 代码执行类模式（PoT、CRITIC 等）的沙箱仅做演示，生产环境请使用 Docker 容器或专用沙箱服务
 
 ## 📐 文档结构约定
 
