@@ -1,10 +1,18 @@
 # Agent 设计模式文档集
 
-本仓库系统性地整理了 **12 大类、93 种** Agent 设计模式，每种模式均配有概念说明、核心流程图和完整的 Python 示例代码。
+本仓库系统性地整理了 **12 大类、100 种** Agent 设计模式，每种模式均配有概念说明、核心流程图和完整的 Python 示例代码。
 
-> 📖 **不知道该选哪个模式？** 请先阅读 [**场景适配指南**](docs/场景适配指南.md) — 包含快速选型决策树、10 个典型场景详解、7 大行业方案、8 个经典组合配方。
+> 📖 **不知道该选哪个模式？** 请先阅读 [**场景适配指南**](docs/场景适配指南.md) — 包含快速选型决策树、10 个典型场景详解、8 大行业方案、8 个经典组合配方。
 
 ## 🆕 最近更新
+
+**2025-2026 年内容更新**（93 → 100）：新增 7 种设计模式，行业方案新增"软件研发"。
+- 自主规划：Agentic Coding（自主编程）
+- 检索增强：LightRAG（轻量图谱检索）
+- 记忆管理：Mem0（记忆即数据库）
+- 框架范式：Orchestrator-Workers（总调度）、Evaluator-Optimizer（评估优化）
+- 工具使用：Browser Use / Web Agent（浏览器Agent）
+- 成本优化：Speculative Decoding（推测解码）
 
 **新增 10 种设计模式**（83 → 93）：
 - 推理增强：Test-Time Compute Scaling (o1)、Chain-of-Verification
@@ -15,7 +23,7 @@
 - 工具使用：Structured Outputs
 - 成本优化：Prompt Caching & Batch API
 
-**新增 3 个行业方案**（4 → 7）：教育、法律、制造
+**新增 4 个行业方案**（4 → 8）：教育、法律、制造、软件研发
 
 **代码质量全面加固**：
 - 全部示例代码添加 `content or ""` None 防护和 `json.loads` try/except 兜底
@@ -28,19 +36,19 @@
 | 序号 | 类别 | 模式数量 | 文档 |
 |:---:|------|:------:|------|
 | 01 | 推理增强类 | 15 | [01_推理增强类.md](docs/01_推理增强类.md) |
-| 02 | 自主规划与执行类 | 8 | [02_自主规划与执行类.md](docs/02_自主规划与执行类.md) |
-| 03 | 检索增强类 (RAG) | 11 | [03_检索增强类.md](docs/03_检索增强类.md) |
+| 02 | 自主规划与执行类 | 9 | [02_自主规划与执行类.md](docs/02_自主规划与执行类.md) |
+| 03 | 检索增强类 (RAG) | 12 | [03_检索增强类.md](docs/03_检索增强类.md) |
 | 04 | 多智能体协作类 | 9 | [04_多智能体协作类.md](docs/04_多智能体协作类.md) |
-| 05 | 记忆与状态管理类 | 6 | [05_记忆与状态管理类.md](docs/05_记忆与状态管理类.md) |
-| 06 | 框架与编程范式类 | 8 | [06_框架与编程范式类.md](docs/06_框架与编程范式类.md) |
+| 05 | 记忆与状态管理类 | 7 | [05_记忆与状态管理类.md](docs/05_记忆与状态管理类.md) |
+| 06 | 框架与编程范式类 | 10 | [06_框架与编程范式类.md](docs/06_框架与编程范式类.md) |
 | 07 | 安全与对齐类 | 10 | [07_安全与对齐类.md](docs/07_安全与对齐类.md) |
-| 08 | 工具使用与函数调用类 | 8 | [08_工具使用与函数调用类.md](docs/08_工具使用与函数调用类.md) |
+| 08 | 工具使用与函数调用类 | 9 | [08_工具使用与函数调用类.md](docs/08_工具使用与函数调用类.md) |
 | 09 | 自我纠错与迭代改进类 | 5 | [09_自我纠错与迭代改进类.md](docs/09_自我纠错与迭代改进类.md) |
 | 10 | 人机协作类 | 4 | [10_人机协作类.md](docs/10_人机协作类.md) |
 | 11 | 评估与测试类 | 4 | [11_评估与测试类.md](docs/11_评估与测试类.md) |
-| 12 | 可观测性与成本优化类 | 5 | [12_可观测性与成本优化类.md](docs/12_可观测性与成本优化类.md) |
+| 12 | 可观测性与成本优化类 | 6 | [12_可观测性与成本优化类.md](docs/12_可观测性与成本优化类.md) |
 | — | **场景适配指南** | — | [场景适配指南.md](docs/场景适配指南.md) |
-| — | 🏯 模式江湖（趣味图鉴） | 93 | [模式江湖.md](docs/模式江湖.md) |
+| — | 🏯 模式江湖（趣味图鉴） | 100 | [模式江湖.md](docs/模式江湖.md) |
 | — | 🛒 电商/零售行业方案 | 3 | [行业方案_电商零售.md](docs/行业方案_电商零售.md) |
 | — | 🏦 金融行业方案 | 3 | [行业方案_金融.md](docs/行业方案_金融.md) |
 | — | 💼 SaaS/企业服务行业方案 | 3 | [行业方案_SaaS企业服务.md](docs/行业方案_SaaS企业服务.md) |
@@ -48,6 +56,7 @@
 | — | 🎓 教育行业方案 | 3 | [行业方案_教育.md](docs/行业方案_教育.md) |
 | — | ⚖️ 法律行业方案 | 3 | [行业方案_法律.md](docs/行业方案_法律.md) |
 | — | 🏭 制造行业方案 | 3 | [行业方案_制造.md](docs/行业方案_制造.md) |
+| — | 💻 软件研发行业方案 | 3 | [行业方案_软件研发.md](docs/行业方案_软件研发.md) |
 
 ## 🗺️ 模式全景图
 
@@ -68,7 +77,8 @@ Agent 设计模式
 │   ├── AutoGPT / BabyAGI     ├── HuggingGPT / TaskMatrix
 │   ├── DEPS                  ├── ART
 │   ├── ADaPT                 ├── Plan-and-Solve (计划与求解)
-│   ├── LLM+P (LLM+经典规划器) └── ReWOO (推理与观察解耦)
+│   ├── LLM+P (LLM+经典规划器) ├── ReWOO (推理与观察解耦)
+│   └── Agentic Coding (自主编程)
 │
 ├── 检索增强类 (RAG) — 何时检索、检索什么、如何利用
 │   ├── Standard RAG          ├── Self-RAG
@@ -77,7 +87,8 @@ Agent 设计模式
 │   ├── HyDE (假设文档嵌入)   ├── Self-Ask (自问自答)
 │   ├── FLARE (前瞻式主动检索)
 │   ├── Speculative RAG (推测式RAG)
-│   └── Adaptive RAG (自适应RAG)
+│   ├── Adaptive RAG (自适应RAG)
+│   └── LightRAG (轻量图谱检索)
 │
 ├── 多智能体协作类 — 多Agent交互获得更高质量产出
 │   ├── AutoGen               ├── MetaGPT
@@ -90,13 +101,16 @@ Agent 设计模式
 │   ├── MemGPT                ├── Generative Agents
 │   ├── Reflection-based Memory   ├── RAG-based Memory
 │   ├── Episodic Memory (情景记忆)
-│   └── Letta (MemGPT演进/有状态Agent)
+│   ├── Letta (MemGPT演进/有状态Agent)
+│   └── Mem0 (记忆即数据库)
 │
 ├── 框架与编程范式类 — 从系统架构层面组织LLM调用
 │   ├── DSPy                  ├── Flow Engineering (LangGraph)
 │   ├── Map-Reduce Pattern    ├── Router / MoE
 │   ├── Structured Output     ├── MCP (模型上下文协议)
-│   ├── Semantic Kernel       └── Prompt Chaining (提示链)
+│   ├── Semantic Kernel       ├── Prompt Chaining (提示链)
+│   ├── Orchestrator-Workers (总调度)
+│   └── Evaluator-Optimizer (评估优化)
 │
 ├── 安全与对齐类 — 确保Agent输出安全、合规、符合价值观
 │   ├── Constitutional AI     ├── Guardrails / NeMo-Guardrails
@@ -111,7 +125,8 @@ Agent 设计模式
 │   ├── Toolformer            ├── Code Interpreter
 │   ├── API Agent / Web Agent ├── Computer Use / GUI Agent
 │   ├── Parallel Function Calling
-│   └── Structured Outputs (结构化输出)
+│   ├── Structured Outputs (结构化输出)
+│   └── Browser Use / Web Agent (浏览器Agent)
 │
 ├── 自我纠错与迭代改进类 — 从"能用"到"可靠"的关键
 │   ├── Self-Refine           ├── Reflexion
@@ -129,7 +144,8 @@ Agent 设计模式
 └── 可观测性与成本优化类 — 生产环境的"看得见、控得住、省得了"
     ├── Tracing & Logging     ├── Token & Cost Monitoring
     ├── Caching & Memoization ├── Model Routing & Cascading
-    └── Prompt Caching & Batch API (提示缓存与批量API)
+    ├── Prompt Caching & Batch API (提示缓存与批量API)
+    └── Speculative Decoding (推测解码)
 ```
 
 ## 📖 推荐阅读顺序
