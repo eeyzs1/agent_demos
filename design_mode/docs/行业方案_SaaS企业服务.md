@@ -92,10 +92,10 @@ flowchart TD
 
 | 架构层 | 基础设施组件 | 推荐模式 | 选型理由 |
 |--------|------------|---------|---------|
-| 入口分类 | 小模型（Qwen2.5-7B）+ 缓存（Redis） | Router/MoE | 工单分类是典型多分类任务，小模型 + 路由满足 2s 延迟与低成本 |
+| 入口分类 | 小模型（Qwen3-7B）+ 缓存（Redis） | Router/MoE | 工单分类是典型多分类任务，小模型 + 路由满足 2s 延迟与低成本 |
 | 知识检索 | Confluence + 向量库（Milvus） | Corrective RAG | 知识库存在过期/噪声文档，需检索后评估相关性并自我纠错 |
 | 工具调用 | AD 域控 API、监控 API、工单 API | Function Calling | 查用户状态、重置密码等结构化操作必须走函数调用 |
-| 方案优化 | LLM（Qwen2.5-72B） | Self-Refine | 初版方案可能表述不清或步骤缺失，需迭代优化 |
+| 方案优化 | LLM（Qwen3-72B） | Self-Refine | 初版方案可能表述不清或步骤缺失，需迭代优化 |
 | 高风险操作 | 审批工作流（钉钉/飞书） | HITL | 账号禁用、权限回收等操作不可逆，必须人工确认 |
 | 成本控制 | Redis 语义缓存 | Caching | "邮箱登录不了"等高频问题占比 60%+，缓存命中显著降本 |
 | 可观测 | OpenTelemetry + ELK | Tracing | 每个工单的完整处理链路需可追溯，满足合规审计 |
@@ -181,8 +181,8 @@ flowchart TD
     Q[业务人员自然语言提问] --> AUTH[权限系统<br/>获取用户数据权限]
     AUTH --> L2M[Least-to-Most<br/>分解分析步骤]
     L2M --> ROUTE{复杂度路由}
-    ROUTE -->|简单聚合| SMALL[小模型生成 SQL<br/>Qwen2.5-7B]
-    ROUTE -->|复杂分析| LARGE[大模型生成 SQL<br/>Qwen2.5-72B]
+    ROUTE -->|简单聚合| SMALL[小模型生成 SQL<br/>Qwen3-7B]
+    ROUTE -->|复杂分析| LARGE[大模型生成 SQL<br/>Qwen3-72B]
     SMALL --> GUARD1[Guardrails<br/>SQL 注入防护+权限检查]
     LARGE --> GUARD1
     GUARD1 --> CRITIC1[CRITIC<br/>语法校验+执行计划]
