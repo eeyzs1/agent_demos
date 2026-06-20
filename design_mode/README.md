@@ -2,7 +2,26 @@
 
 本仓库系统性地整理了 **12 大类、93 种** Agent 设计模式，每种模式均配有概念说明、核心流程图和完整的 Python 示例代码。
 
-> 📖 **不知道该选哪个模式？** 请先阅读 [**场景适配指南**](docs/场景适配指南.md) — 包含快速选型决策树、10 个典型场景详解、9 大行业方案、8 个经典组合配方。
+> 📖 **不知道该选哪个模式？** 请先阅读 [**场景适配指南**](docs/场景适配指南.md) — 包含快速选型决策树、10 个典型场景详解、7 大行业方案、8 个经典组合配方。
+
+## 🆕 最近更新
+
+**新增 10 种设计模式**（83 → 93）：
+- 推理增强：Test-Time Compute Scaling (o1)、Chain-of-Verification
+- 检索增强：Speculative RAG、Adaptive RAG
+- 多智能体协作：A2A Protocol
+- 记忆管理：Letta (MemGPT 演进)
+- 安全对齐：DPO & RLAIF、Llama Guard
+- 工具使用：Structured Outputs
+- 成本优化：Prompt Caching & Batch API
+
+**新增 3 个行业方案**（4 → 7）：教育、法律、制造
+
+**代码质量全面加固**：
+- 全部示例代码添加 `content or ""` None 防护和 `json.loads` try/except 兜底
+- PoT / CRITIC 的 `exec()` 改为 `SAFE_BUILTINS` 白名单沙箱
+- 修复 GoT 多父节点追溯、Swarm 贪婪正则、CrewAI 上下文累加等逻辑 bug
+- 修正 Self-RAG 流程图、MemGPT 记忆归类、Generative Agents 衰减系数等技术错误
 
 ## 📚 文档目录
 
@@ -42,7 +61,8 @@ Agent 设计模式
 │   ├── SoT (骨架思维)        ├── RE2 (重复阅读)
 │   ├── S2A (系统2注意力)     ├── Emotion Prompting (情感提示)
 │   ├── LATS (语言智能体树搜索)
-│   └── Test-Time Compute Scaling (测试时计算扩展/o1)
+│   ├── Test-Time Compute Scaling (测试时计算扩展/o1)
+│   └── Chain-of-Verification (验证链/CoV)
 │
 ├── 自主规划与执行类 — 让Agent自主制定计划并执行
 │   ├── AutoGPT / BabyAGI     ├── HuggingGPT / TaskMatrix
@@ -114,6 +134,8 @@ Agent 设计模式
 
 ## 📖 推荐阅读顺序
 
+> 💡 **第一步永远是** [场景适配指南](docs/场景适配指南.md) — 用决策树 30 秒找到你需要的模式。
+
 ### 入门路径（先理解核心概念）
 1. **08 工具使用与函数调用类** → 理解 Agent 的核心能力（ReAct 是基石）
 2. **01 推理增强类** → 理解如何增强 LLM 的推理能力
@@ -136,7 +158,7 @@ Agent 设计模式
 
 ## ⚙️ 环境配置
 
-所有示例代码基于 OpenAI Python SDK：
+**Python 3.10+**，所有示例代码基于 OpenAI Python SDK：
 
 ```bash
 pip install openai numpy
@@ -146,7 +168,7 @@ pip install openai numpy
 
 ```bash
 export OPENAI_API_KEY="your-api-key"
-# 如使用兼容接口，还需设置：
+# 如使用兼容接口（如 Azure OpenAI、本地部署），还需设置：
 export OPENAI_BASE_URL="https://your-api-endpoint"
 ```
 
@@ -155,6 +177,7 @@ export OPENAI_BASE_URL="https://your-api-endpoint"
 - 向量检索示例：内置 `SimpleVectorStore`，无需额外安装
 - 语义缓存示例（12.3）：依赖 `numpy`（已包含在基础安装中）
 - 链路追踪示例（12.1）：可选集成 OpenTelemetry 用于生产环境
+- 生产环境重试：推荐 `pip install tenacity`（指数退避重试）
 
 > ⚠️ **生产环境注意事项**：本文档中的示例代码为教学目的编写，省略了生产环境必需的错误处理（如 API 限流重试、超时处理、网络异常恢复等）。生产部署时请务必：
 > - 对所有 LLM 调用添加 `try/except`，捕获 `openai.RateLimitError`、`openai.APIError`、`openai.APITimeoutError` 等
