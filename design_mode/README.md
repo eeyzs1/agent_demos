@@ -1,10 +1,20 @@
 # Agent 设计模式文档集
 
-本仓库系统性地整理了 **12 大类、110 种** Agent 设计模式，每种模式均配有概念说明、核心流程图和完整的 Python 示例代码。
+本仓库系统性地整理了 **12 大类、116 种** Agent 设计模式，每种模式均配有概念说明、核心流程图和完整的 Python 示例代码。
 
 > 📖 **不知道该选哪个模式？** 请先阅读 [**场景适配指南**](docs/场景适配指南.md) — 包含快速选型决策树、10 个典型场景详解、8 大行业方案、8 个经典组合配方。
 
 ## 🆕 最近更新
+
+**第四轮 2026 内容更新**（110 → 116）：新增 6 种 2026 年前沿设计模式。
+- 多智能体协作：Blackboard Systems（黑板报系统，机会式触发协作）
+- 记忆管理：Graph/World-Model Memory（图/世界模型记忆，关系网式记忆）
+- 框架范式：Meta-Controller Pattern（元控制器，负载感知全局路由）
+- 安全对齐：Dry-Run Harness（彩排间，不可逆操作先预演再执行）
+- 自我纠错：Meta-Agent / Self-Improving Agent（造物主，改 harness 本身）
+- 成本优化：Reflexive Agent（反射弧，内部推理 vs 外部工具路由）
+
+另：08 章 ReAct 条目下新增 **TAOR Loop** 演进注记（ReAct + Reflexion 单轮内融合，作为 8.1 子注记，不独立成条）。
 
 **第三轮 2025-2026 内容更新**（104 → 110）：新增 6 种 2025-2026 前沿模式。
 - 自主规划：Durable Execution（持久化执行引擎）
@@ -55,17 +65,17 @@
 | 01 | 推理增强类 | 15 | [01_推理增强类.md](docs/01_推理增强类.md) |
 | 02 | 自主规划与执行类 | 11 | [02_自主规划与执行类.md](docs/02_自主规划与执行类.md) |
 | 03 | 检索增强类 (RAG) | 16 | [03_检索增强类.md](docs/03_检索增强类.md) |
-| 04 | 多智能体协作类 | 9 | [04_多智能体协作类.md](docs/04_多智能体协作类.md) |
-| 05 | 记忆与状态管理类 | 8 | [05_记忆与状态管理类.md](docs/05_记忆与状态管理类.md) |
-| 06 | 框架与编程范式类 | 12 | [06_框架与编程范式类.md](docs/06_框架与编程范式类.md) |
-| 07 | 安全与对齐类 | 10 | [07_安全与对齐类.md](docs/07_安全与对齐类.md) |
+| 04 | 多智能体协作类 | 10 | [04_多智能体协作类.md](docs/04_多智能体协作类.md) |
+| 05 | 记忆与状态管理类 | 9 | [05_记忆与状态管理类.md](docs/05_记忆与状态管理类.md) |
+| 06 | 框架与编程范式类 | 13 | [06_框架与编程范式类.md](docs/06_框架与编程范式类.md) |
+| 07 | 安全与对齐类 | 11 | [07_安全与对齐类.md](docs/07_安全与对齐类.md) |
 | 08 | 工具使用与函数调用类 | 10 | [08_工具使用与函数调用类.md](docs/08_工具使用与函数调用类.md) |
-| 09 | 自我纠错与迭代改进类 | 5 | [09_自我纠错与迭代改进类.md](docs/09_自我纠错与迭代改进类.md) |
+| 09 | 自我纠错与迭代改进类 | 6 | [09_自我纠错与迭代改进类.md](docs/09_自我纠错与迭代改进类.md) |
 | 10 | 人机协作类 | 4 | [10_人机协作类.md](docs/10_人机协作类.md) |
 | 11 | 评估与测试类 | 4 | [11_评估与测试类.md](docs/11_评估与测试类.md) |
-| 12 | 可观测性与成本优化类 | 6 | [12_可观测性与成本优化类.md](docs/12_可观测性与成本优化类.md) |
+| 12 | 可观测性与成本优化类 | 7 | [12_可观测性与成本优化类.md](docs/12_可观测性与成本优化类.md) |
 | — | **场景适配指南** | — | [场景适配指南.md](docs/场景适配指南.md) |
-| — | 🏯 模式江湖（趣味图鉴） | 110 | [模式江湖.md](docs/模式江湖.md) |
+| — | 🏯 模式江湖（趣味图鉴） | 116 | [模式江湖.md](docs/模式江湖.md) |
 | — | 🛒 电商/零售行业方案 | 3 | [行业方案_电商零售.md](docs/行业方案_电商零售.md) |
 | — | 🏦 金融行业方案 | 3 | [行业方案_金融.md](docs/行业方案_金融.md) |
 | — | 💼 SaaS/企业服务行业方案 | 3 | [行业方案_SaaS企业服务.md](docs/行业方案_SaaS企业服务.md) |
@@ -118,7 +128,8 @@ Agent 设计模式
 │   ├── CrewAI                ├── MoA (混合Agent)
 │   ├── MAD (多Agent辩论)     ├── DyLAN (动态Agent网络)
 │   ├── OpenAI Swarm (轻量编排) ├── ChatDev (聊天驱动开发)
-│   └── A2A Protocol (Agent间通信协议)
+│   ├── A2A Protocol (Agent间通信协议)
+│   └── Blackboard Systems (黑板报系统)
 │
 ├── 记忆与状态管理类 — 让Agent"记住该记住的、忘掉该忘掉的"
 │   ├── MemGPT                ├── Generative Agents
@@ -126,7 +137,8 @@ Agent 设计模式
 │   ├── Episodic Memory (情景记忆)
 │   ├── Letta (MemGPT演进/有状态Agent)
 │   ├── Mem0 (记忆即数据库)
-│   └── Dreaming (梦境记忆整合)
+│   ├── Dreaming (梦境记忆整合)
+│   └── Graph/World-Model Memory (图/世界模型记忆)
 │
 ├── 框架与编程范式类 — 从系统架构层面组织LLM调用
 │   ├── DSPy                  ├── Flow Engineering (LangGraph)
@@ -136,7 +148,8 @@ Agent 设计模式
 │   ├── Orchestrator-Workers (总调度)
 │   ├── Evaluator-Optimizer (评估优化)
 │   ├── Context Engineering / Compaction (上下文工程)
-│   └── Subagents (子代理模式)
+│   ├── Subagents (子代理模式)
+│   └── Meta-Controller (元控制器)
 │
 ├── 安全与对齐类 — 确保Agent输出安全、合规、符合价值观
 │   ├── Constitutional AI     ├── Guardrails / NeMo-Guardrails
@@ -144,7 +157,8 @@ Agent 设计模式
 │   ├── RLHF-aware Design     ├── Red Teaming (红队测试)
 │   ├── Prompt Injection Defense  ├── Jailbreak Defense
 │   ├── DPO & RLAIF (直接偏好优化与AI反馈对齐)
-│   └── Llama Guard (输入输出安全分类)
+│   ├── Llama Guard (输入输出安全分类)
+│   └── Dry-Run Harness (彩排间)
 │
 ├── 工具使用与函数调用类 — Agent区别于普通LLM的核心能力
 │   ├── ReAct                 ├── Function Calling
@@ -158,7 +172,8 @@ Agent 设计模式
 ├── 自我纠错与迭代改进类 — 从"能用"到"可靠"的关键
 │   ├── Self-Refine           ├── Reflexion
 │   ├── CRITIC                ├── Iterative Refinement
-│   └── Self-Discover (自我发现推理结构)
+│   ├── Self-Discover (自我发现推理结构)
+│   └── Meta-Agent (自我进化元Agent)
 │
 ├── 人机协作类 — 生产系统的必备机制
 │   ├── Human-in-the-Loop     ├── Interactive Agent
@@ -172,7 +187,8 @@ Agent 设计模式
     ├── Tracing & Logging     ├── Token & Cost Monitoring
     ├── Caching & Memoization ├── Model Routing & Cascading
     ├── Prompt Caching & Batch API (提示缓存与批量API)
-    └── Speculative Decoding (推测解码)
+    ├── Speculative Decoding (推测解码)
+    └── Reflexive Agent (反射型Agent)
 ```
 
 ## 📖 推荐阅读顺序
