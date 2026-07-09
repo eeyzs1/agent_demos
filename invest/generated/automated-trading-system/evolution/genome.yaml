@@ -1,0 +1,66 @@
+# Automated Trading System — Evolution Genome
+# Seed constraints from task.yaml hard_constraints
+
+constraints:
+  - id: C001
+    rule: "Paper trading is default; live trading requires explicit --live flag"
+    source: "task.hard_constraints"
+    enforced_by: "src/trading_system/execution/broker.py"
+
+  - id: C002
+    rule: "Max risk per trade: 2% of total capital"
+    source: "task.hard_constraints"
+    enforced_by: "src/trading_system/risk/position_sizing.py"
+
+  - id: C003
+    rule: "Max drawdown limit: 20%, triggers circuit breaker"
+    source: "task.hard_constraints"
+    enforced_by: "src/trading_system/risk/circuit_breaker.py"
+
+  - id: C004
+    rule: "Daily loss > 5% triggers circuit breaker with 3-day cooldown"
+    source: "task.hard_constraints"
+    enforced_by: "src/trading_system/risk/circuit_breaker.py"
+
+  - id: C005
+    rule: "All operations must be audit-logged"
+    source: "task.hard_constraints"
+    enforced_by: "src/trading_system/core/audit.py"
+
+  - id: C006
+    rule: "No mock/fake/stub in production code"
+    source: "task.hard_constraints"
+    enforced_by: "verification/anti-mock-check.py"
+
+  - id: C007
+    rule: "Python with akshare data source"
+    source: "task.hard_constraints"
+    enforced_by: "pyproject.toml"
+
+workflows:
+  - id: daily-pipeline
+    description: "Daily scan → score → fusion → risk → report → trade"
+    steps: [scan, score, fusion, risk_check, report, trade]
+    fitness_weight: 0.4
+
+  - id: backtest
+    description: "Strategy backtest with 7 metrics + Monte Carlo"
+    steps: [load_data, run_strategy, calculate_metrics, monte_carlo, significance_test]
+    fitness_weight: 0.3
+
+  - id: risk-management
+    description: "Position sizing, stop loss, circuit breaker enforcement"
+    steps: [calculate_position, set_stop_loss, check_drawdown, check_daily_loss]
+    fitness_weight: 0.3
+
+fitness:
+  metrics:
+    - name: "pipeline_completeness"
+      weight: 0.4
+      description: "All acceptance criteria verified"
+    - name: "test_coverage"
+      weight: 0.3
+      description: "Code coverage percentage"
+    - name: "risk_safety"
+      weight: 0.3
+      description: "Risk controls correctly enforced in tests"

@@ -1,0 +1,118 @@
+workflows:
+  main:
+    description: "Main development workflow: core → data → strategies → backtest → risk → execution → CLI → verify"
+    steps:
+      - id: init
+        command: "python verification/self-check.py --verify-ac WU001"
+        depends_on: []
+        on_failure: halt
+
+      - id: data_layer
+        command: "python verification/self-check.py --verify-ac WU002"
+        depends_on: [init]
+        on_failure: halt
+
+      - id: strategy_layer
+        command: "python verification/self-check.py --verify-ac WU003"
+        depends_on: [data_layer]
+        on_failure: halt
+        parallel_group: strategies
+
+      - id: strategy_impl
+        command: "python verification/self-check.py --verify-ac WU004"
+        depends_on: [data_layer]
+        on_failure: halt
+        parallel_group: strategies
+
+      - id: backtest
+        command: "python verification/self-check.py --verify-ac WU005"
+        depends_on: [strategy_layer, strategy_impl]
+        on_failure: halt
+
+      - id: monte_carlo
+        command: "python verification/self-check.py --verify-ac WU006"
+        depends_on: [backtest]
+        on_failure: halt
+
+      - id: risk_layer
+        command: "python verification/self-check.py --verify-ac WU007"
+        depends_on: [init]
+        on_failure: halt
+
+      - id: execution_layer
+        command: "python verification/self-check.py --verify-ac WU008"
+        depends_on: [risk_layer, strategy_layer]
+        on_failure: halt
+
+      - id: sentiment
+        command: "python verification/self-check.py --verify-ac WU009"
+        depends_on: [data_layer]
+        on_failure: continue
+        parallel_group: research
+
+      - id: fundamental
+        command: "python verification/self-check.py --verify-ac WU010"
+        depends_on: [data_layer]
+        on_failure: continue
+        parallel_group: research
+
+      - id: portfolio
+        command: "python verification/self-check.py --verify-ac WU011"
+        depends_on: [data_layer]
+        on_failure: continue
+        parallel_group: research
+
+      - id: stat_arb
+        command: "python verification/self-check.py --verify-ac WU012"
+        depends_on: [data_layer]
+        on_failure: continue
+        parallel_group: research
+
+      - id: cli
+        command: "python verification/self-check.py --verify-ac WU013"
+        depends_on: [backtest, monte_carlo, execution_layer, sentiment, fundamental, portfolio, stat_arb]
+        on_failure: halt
+
+      - id: integration_test
+        command: "python verification/self-check.py --verify-ac WU014"
+        depends_on: [cli]
+        on_failure: halt
+
+      - id: risk_test
+        command: "python verification/self-check.py --verify-ac WU015"
+        depends_on: [execution_layer]
+        on_failure: halt
+
+      - id: backtest_test
+        command: "python verification/self-check.py --verify-ac WU016"
+        depends_on: [monte_carlo]
+        on_failure: halt
+
+  verify:
+    description: "Verification workflow: run all checks"
+    steps:
+      - id: anti_mock
+        command: "python verification/anti-mock-check.py --project-root ."
+        depends_on: []
+        on_failure: halt
+
+      - id: quality_gate
+        command: "python verification/quality-gate.py --check"
+        depends_on: []
+        on_failure: halt
+
+      - id: consistency
+        command: "python verification/consistency-check.py --project-root ."
+        depends_on: []
+        on_failure: halt
+
+      - id: lint
+        command: "python verification/lint-check.py --project-root src/"
+        depends_on: []
+        on_failure: continue
+
+mandatory_pre_steps:
+  - command: "python guard.py"
+    description: "Pre-action constraint guard: architecture rules + mock detection"
+  - command: "python verification/audit-append.py --event pre_action"
+    description: "Audit log entry before any action"

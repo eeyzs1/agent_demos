@@ -1,0 +1,50 @@
+agent:
+  name: research-engineer
+  role: '6-dimension sentiment scoring and 5-level output; Market hotspot detection
+    with momentum labels; Fundamental research: news, reports, announcements; Key
+    findings and risk warnings'
+  capabilities:
+  - 6-dimension sentiment scoring and 5-level output
+  - Market hotspot detection with momentum labels
+  - 'Fundamental research: news, reports, announcements'
+  - Key findings and risk warnings
+  tools:
+  - name: src/trading_system/data/
+    access: read
+  - name: src/trading_system/core/
+    access: read
+  - name: src/trading_system/sentiment/
+    access: write
+  - name: src/trading_system/research/
+    access: write
+  scope:
+    can_read:
+    - src/trading_system/data/
+    - src/trading_system/core/
+    can_write:
+    - src/trading_system/sentiment/
+    - src/trading_system/research/
+    can_execute:
+    - python orchestrator.py --verify
+    - python guard.py --check
+  boundaries:
+    cannot:
+    - Make trading decisions
+    - Access execution engine
+    max_context_lines: 2500
+    requires_human_review: false
+  handoff:
+    input_format:
+    - src/trading_system/data/
+    - src/trading_system/core/
+    output_format:
+    - src/trading_system/sentiment/
+    - src/trading_system/research/
+  verification:
+    self_check: Run verification before marking complete
+    external_check: orchestrator.py --verify must pass
+  assigned_workflows:
+  - main
+  assigned_criteria:
+  - 'AC2: Full daily pipeline runs end-to-end: scan → score → strategy fusion → risk
+    → report'

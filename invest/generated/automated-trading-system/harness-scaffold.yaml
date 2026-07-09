@@ -1,0 +1,145 @@
+version: 1
+scaffolded_at: '2026-07-09T15:34:52.638242'
+task_file: task.yaml
+task_name: automated-trading-system
+task_domain: automation
+profile:
+  tier: full
+  scope: 5
+  criticality: 4
+  novelty: 3
+  coupling: 3
+universal_primitives:
+- context/loader.py
+- tools/tool-discovery.py
+- memory/snapshot.py
+- planning/dag-builder.py
+- planning/dispatcher.py
+- planning/task-card-schema.yaml
+- verification/self-check.py
+- verification/consistency-check.py
+- verification/anti-mock-check.py
+- verification/quality-gate.py
+- verification/dispatch-verifier.py
+- verification/hook-executor.py
+- verification/runtime-hooks.yaml
+- verification/audit-append.py
+- verification/lint-check.py
+- feedback/error-capture.py
+- feedback/mistake-to-constraint.py
+- constraints/entropy-reduction.py
+- evolution/framework.md
+- evolution/innovation-engine.py
+- evolution/product-analyzer.py
+- guard.py
+- orchestrator.py
+llm_slots:
+- layer: context
+  file: context/knowledge-index.yaml
+  baseline_hash: 2b90d8a7b7854635fe5e139292cd0968
+  guidance: 分析 task 的组件结构，把 mappings 改为该项目的真实路径到知识域映射。每条带 description + tags。
+- layer: tools
+  file: tools/schemas.yaml
+  baseline_hash: 580c91fa3f58107f5f5756f9891684a1
+  guidance: 分析 task 实际需要调用的工具（DB/HTTP/外部 API/协议），写出该项目的工具 schema 定义。
+- layer: tools
+  file: tools/sandbox.yaml
+  baseline_hash: d1f043c0f1a90ca2a5e52e38a609e5a6
+  guidance: 按该项目实际执行的命令与网络访问需求，写沙箱配置。
+- layer: tools
+  file: tools/permissions.yaml
+  baseline_hash: eb5b2205f812f914087a0851a86bfee7
+  guidance: 按该项目 agent 角色（planner/executor/verifier 等），写每个角色的读写执行权限。
+- layer: memory
+  file: memory/session-state.yaml
+  baseline_hash: d41d8cd98f00b204e9800998ecf8427e
+  guidance: 初始化会话状态：当前阶段、已完成/待办验收标准（从 task.acceptance_criteria 派生）。
+- layer: memory
+  file: memory/compression-rules.yaml
+  baseline_hash: dff99b67091a652691bf16945dec2d90
+  guidance: 按该项目该保留/压缩/遗忘的内容，写压缩规则。
+- layer: planning
+  file: planning/flow-control.yaml
+  baseline_hash: 66610debccd81a65c6952a12f371c1d6
+  guidance: 按该项目工作流（顺序/并行/条件/重试），写流控配置。
+- layer: planning
+  file: planning/work-units.yaml
+  baseline_hash: d41d8cd98f00b204e9800998ecf8427e
+  guidance: 把 task 分解为可独立派发的工作单元。每条含 id/name/depends_on/assigned_to/success_constraints/success_criteria。depends_on
+    必须基于真实依赖（如下游用上游的产物）。assigned_to 必须引用 sub-agent-dispatch.yaml 里某个 prototype 名。dispatcher.py
+    读本文件做拓扑排序与并行分组，不要在这里硬塞顺序——只声明依赖关系即可。
+- layer: planning
+  file: planning/sub-agent-dispatch.yaml
+  baseline_hash: 6fd373103a557162b98e646c60f5c71d
+  guidance: '分析 task 的工作单元与依赖，合成 agent 拓扑（不要套用固定公式 ceil(S/2)）。每个 prototype 必须含 responsibilities/receives/produces/count/boundaries.cannot/boundaries.max_context_lines。需人工
+    review 的角色必须显式 requires_human_review: true。'
+- layer: planning
+  file: planning/budget.yaml
+  baseline_hash: 7d489ad6716effc7a81d0b8dc53345e3
+  guidance: 按该项目复杂度与风险，设置 reasoning step/token/retry 预算。
+- layer: verification
+  file: verification/security-guardrails.yaml
+  baseline_hash: 747c986914f22d2ccf326fdd29fd35d1
+  guidance: 分析 task 的数据流与敏感数据面，写 PII/secret 模式与危险操作拦截（针对该项目领域）。
+- layer: feedback
+  file: feedback/retry-config.yaml
+  baseline_hash: f85c4cdb08924f2c22154aa244f01df6
+  guidance: 按该项目可能的错误类型，写重试策略。
+- layer: feedback
+  file: feedback/human-interface.yaml
+  baseline_hash: 1948b3efdc6af4396bb7ac57b3ef883e
+  guidance: 按该项目人工 review 需求，写人机界面配置（何时暂停、如何呈现、谁 review）。仅在 C>=4 时生成。
+- layer: constraints
+  file: constraints/architecture-rules.yaml
+  baseline_hash: 8a5f7657fa5933171ccee2f8d5046992
+  guidance: 分析 task 的组件依赖图，写依赖方向规则（allowed/forbidden）与架构约束——必须引用 task 里真实的组件/模块。
+- layer: constraints
+  file: constraints/linter-config.yaml
+  baseline_hash: c88a603b600374460d4a5f5460b4158d
+  guidance: 按该项目架构规则派生 lint 规则。
+- layer: constraints
+  file: constraints/cost-budget.yaml
+  baseline_hash: d9ef587b8a314c14f6d6711c5cd15cad
+  guidance: 按该项目实际资源约束（不是 web-app 默认值），写预算阈值。
+- layer: security
+  file: security/sandbox-config.yaml
+  baseline_hash: 6cc9dd042798cdd70df44472f7c266e0
+  guidance: 按该项目隔离需求，写沙箱配置。
+- layer: security
+  file: security/encryption-rules.yaml
+  baseline_hash: 5813e9bea2d5bfe4ccd72a58287ad60e
+  guidance: 按该项目数据分类，写加密规则。
+- layer: security
+  file: security/audit-log.yaml
+  baseline_hash: 68f01415775fac6ba4a39f7fbf9646ca
+  guidance: 按该项目审计需求，写审计日志配置。
+- layer: observability
+  file: observability/tracing.yaml
+  baseline_hash: 9cfc7700c30a68bbaa50e59642f820f0
+  guidance: 按该项目可观测需求，写追踪配置。
+- layer: observability
+  file: observability/metrics-dashboard.yaml
+  baseline_hash: 6b919bb4d9345484b5bd492775ee1662
+  guidance: 按该项目质量指标，写监控面板配置。
+- layer: observability
+  file: observability/session-replay.yaml
+  baseline_hash: 00aa9f9c111fee1beaf30a4bb4178827
+  guidance: 按该项目回放需求，写会话回放配置。
+- layer: observability
+  file: observability/versioning.yaml
+  baseline_hash: 0a70da61ac11493350b7236ab9c0f853
+  guidance: 版本管理配置（结构通用，可按项目调整）。
+- layer: evolution
+  file: evolution/genome.yaml
+  baseline_hash: 32a08845561f2e93250b9ede0a00a98f
+  guidance: 初始化进化基因组：把 task 的 hard_constraints 与 acceptance_criteria 作为种子约束写入。
+- layer: evolution
+  file: evolution/log.yaml
+  baseline_hash: c44d031d1e523f86642b19feb0a38c08
+  guidance: 初始化为空进化日志。
+- layer: evolution
+  file: evolution/domain-advancements.yaml
+  baseline_hash: b3a91d998d53d6b09b146e9a62bd2f0c
+  guidance: 按该项目领域写四阶段进阶模式（Basic/Solid/Advanced/Excellent），供创新引擎使用。
+next_step: LLM 读 meta/harness-author.md，对每个 llm_slots 条目分析 task.yaml 并改写文件。完成后运行 python
+  scripts/validate-harness.py <output_dir> 校验。

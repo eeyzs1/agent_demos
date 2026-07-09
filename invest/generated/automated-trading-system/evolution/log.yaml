@@ -1,0 +1,26 @@
+version: 1
+description: Evolution log — automated trading system
+created_at: "2026-07-09"
+initial_harness:
+  task: automated-trading-system
+  domain: automation
+  complexity: { scope: 5, criticality: 4, novelty: 3, coupling: 3 }
+  tier: full
+seed_constraints:
+  - "Paper trading by default; live trading requires explicit --live flag"
+  - "Max risk per trade: 2% of total capital"
+  - "Max drawdown limit: 20%, triggers circuit breaker"
+  - "Daily loss > 5% triggers circuit breaker with 3-day cooldown"
+  - "All operations must be audit-logged"
+  - "No mock/fake/stub in production code"
+  - "Python with akshare data source"
+seed_acceptance_criteria:
+  - "AC1: Paper trading mode is default; live trading requires explicit --live flag"
+  - "AC2: Full daily pipeline runs end-to-end: scan → score → strategy fusion → risk → report"
+  - "AC3: Backtest engine produces 7 key metrics"
+  - "AC4: Monte Carlo backtest outputs P10/P25/P50/P75/P90 equity distribution and loss probability"
+  - "AC5: Risk management enforces: position sizing, stop loss, max drawdown, circuit breaker"
+  - "AC6: All CLI commands produce structured output (JSON or Markdown)"
+  - "AC7: Strategy backtest with custom parameters is supported"
+  - "AC8: Deflated Sharpe Ratio significance test correctly penalizes multiple testing"
+mutations: []

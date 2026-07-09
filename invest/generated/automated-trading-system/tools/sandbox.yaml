@@ -1,0 +1,48 @@
+version: 1
+description: Sandbox configuration for automated quantitative trading CLI tool
+allowed_commands:
+  - python
+  - pip
+  - pytest
+  - ruff
+  - mypy
+  - git
+blocked_commands:
+  - rm -rf /
+  - sudo
+  - curl.*|.*sh
+  - wget.*|.*sh
+  - mkfs
+  - dd if=
+  - pip uninstall
+network_rules:
+  allow_outbound:
+    - "pypi.org"
+    - "files.pythonhosted.org"
+    - "akshare.akfamily.xyz"
+    - "push2his.eastmoney.com"
+    - "push2.eastmoney.com"
+    - "datacenter.eastmoney.com"
+    - "emweb.securities.eastmoney.com"
+    - "quote.eastmoney.com"
+  block_outbound:
+    - "*"
+  allow_inbound: []
+file_access:
+  allow_paths:
+    - "./src"
+    - "./tests"
+    - "./config"
+    - "./data"
+    - "./scripts"
+    - "./output"
+  block_paths:
+    - "/etc"
+    - "/var"
+    - "~/.ssh"
+    - "~/.aws"
+    - "~/.gnupg"
+resource_limits:
+  max_memory_mb: 2048
+  max_cpu_seconds: 600
+  max_file_size_mb: 100

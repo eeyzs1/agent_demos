@@ -1,0 +1,55 @@
+version: 1
+description: Distributed tracing configuration — automated trading pipeline
+
+tracing:
+  enabled: true
+  provider: opentelemetry
+  sampling_rate: 1.0
+  propagation_format: w3c_trace_context
+
+spans:
+  - name: data_fetch
+    attributes: [data_source, stock_count, date_range, duration_ms, success_count, failure_count]
+    kind: CLIENT
+
+  - name: stock_screening
+    attributes: [screener_name, input_count, output_count, factor_count, duration_ms]
+    kind: INTERNAL
+
+  - name: strategy_fusion
+    attributes: [strategy_name, stock_code, signal_count, score, duration_ms]
+    kind: INTERNAL
+
+  - name: backtest_run
+    attributes: [strategy_name, date_range, trade_count, duration_ms]
+    kind: INTERNAL
+
+  - name: monte_carlo_simulation
+    attributes: [simulation_count, p10, p25, p50, p75, p90, loss_probability, duration_ms]
+    kind: INTERNAL
+
+  - name: risk_check
+    attributes: [check_type, position_size, drawdown, daily_loss, passed, duration_ms]
+    kind: INTERNAL
+
+  - name: order_execution
+    attributes: [order_id, stock_code, direction, quantity, price, trading_mode, duration_ms]
+    kind: CLIENT
+
+  - name: report_generation
+    attributes: [report_type, format, section_count, duration_ms]
+    kind: INTERNAL
+
+  - name: agent_execution
+    attributes: [agent_role, task_type, steps_taken, tokens_used]
+    kind: INTERNAL
+
+  - name: verification
+    attributes: [check_type, passed, violations_count]
+    kind: INTERNAL
+
+export:
+  format: json
+  path: "logs/traces/"
+  rotation: daily
+  retention_days: 30

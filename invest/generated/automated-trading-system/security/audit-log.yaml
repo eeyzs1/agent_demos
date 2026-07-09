@@ -1,0 +1,71 @@
+version: 1
+description: >-
+  Audit logging configuration for automated trading system.
+  本文件声明"要记什么/怎么记/是否不可篡改"——是配置 dict。
+  实际的不可篡改哈希链日志由 verification/audit-append.py 写到
+  audit_log.yaml (YAML list of records, 每条含 seq/timestamp/event/check_id/
+  result/actor/payload_digest/prev_hash/hash)。
+
+logging:
+  enabled: true
+  level: INFO
+  format: structured_json
+  outputs:
+    - type: file
+      path: "logs/audit.jsonl"
+      rotation: daily
+      retention_days: 365
+    - type: console
+      level: WARNING
+
+events_to_log:
+  - category: order_placement
+    fields: [order_id, stock_code, direction, quantity, price, order_type, trading_mode, timestamp]
+    level: INFO
+    reason: "Track all order placements for compliance and audit"
+
+  - category: risk_checks
+    fields: [check_type, result, position_size, drawdown_pct, daily_loss_pct, limit_breached, timestamp]
+    level: INFO
+    reason: "Track all risk management decisions"
+
+  - category: circuit_breaker
+    fields: [trigger_reason, drawdown_value, daily_loss_value, cooldown_days, timestamp]
+    level: WARNING
+    reason: "Circuit breaker triggers are critical events"
+
+  - category: config_changes
+    fields: [config_file, changed_fields, old_values, new_values, actor, timestamp]
+    level: INFO
+    reason: "Track all configuration modifications"
+
+  - category: data_fetch
+    fields: [data_source, stock_codes, date_range, success_count, failure_count, duration_ms, timestamp]
+    level: INFO
+    reason: "Track data fetch operations"
+
+  - category: strategy_execution
+    fields: [strategy_name, stock_code, signals, scores, timestamp]
+    level: INFO
+    reason: "Track strategy decisions for reproducibility"
+
+  - category: backtest_results
+    fields: [strategy_name, date_range, win_rate, sharpe_ratio, max_drawdown, annual_return, total_trades, timestamp]
+    level: INFO
+    reason: "Track backtest results for strategy comparison"
+
+  - category: constraint_violations
+    fields: [rule_id, violation_type, file, details, timestamp]
+    level: WARNING
+    reason: "Track when constraints are violated"
+
+  - category: human_interventions
+    fields: [trigger, decision, context, timestamp]
+    level: INFO
+    reason: "Track when humans override the system"
+
+immutability:
+  enabled: true
+  method: append_only
+  tamper_detection: hash_chain
+  reason: "Audit logs must be tamper-proof for trading compliance and regulatory requirements"

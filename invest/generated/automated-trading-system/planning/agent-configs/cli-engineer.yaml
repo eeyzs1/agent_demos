@@ -1,0 +1,67 @@
+agent:
+  name: cli-engineer
+  role: Build CLI with Click framework + Rich terminal UI; All commands output structured
+    JSON or Markdown; Implement --help on every command group
+  capabilities:
+  - Build CLI with Click framework + Rich terminal UI
+  - All commands output structured JSON or Markdown
+  - Implement --help on every command group
+  tools:
+  - name: src/trading_system/core/
+    access: read
+  - name: src/trading_system/data/
+    access: read
+  - name: src/trading_system/strategy/
+    access: read
+  - name: src/trading_system/backtest/
+    access: read
+  - name: src/trading_system/risk/
+    access: read
+  - name: src/trading_system/execution/
+    access: read
+  - name: src/trading_system/sentiment/
+    access: read
+  - name: src/trading_system/research/
+    access: read
+  - name: src/trading_system/cli/
+    access: write
+  scope:
+    can_read:
+    - src/trading_system/core/
+    - src/trading_system/data/
+    - src/trading_system/strategy/
+    - src/trading_system/backtest/
+    - src/trading_system/risk/
+    - src/trading_system/execution/
+    - src/trading_system/sentiment/
+    - src/trading_system/research/
+    can_write:
+    - src/trading_system/cli/
+    can_execute:
+    - python orchestrator.py --verify
+    - python guard.py --check
+  boundaries:
+    cannot:
+    - Implement business logic in CLI layer
+    - Access data sources directly
+    max_context_lines: 3000
+    requires_human_review: false
+  handoff:
+    input_format:
+    - src/trading_system/core/
+    - src/trading_system/data/
+    - src/trading_system/strategy/
+    - src/trading_system/backtest/
+    - src/trading_system/risk/
+    - src/trading_system/execution/
+    - src/trading_system/sentiment/
+    - src/trading_system/research/
+    output_format:
+    - src/trading_system/cli/
+  verification:
+    self_check: Run verification before marking complete
+    external_check: orchestrator.py --verify must pass
+  assigned_workflows:
+  - main
+  assigned_criteria:
+  - 'AC6: All CLI commands produce structured output (JSON or Markdown)'

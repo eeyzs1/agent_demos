@@ -1,0 +1,44 @@
+agent:
+  name: data-engineer
+  role: Implement market data fetching (daily/intraday) via akshare; Data caching
+    and watchlist management; Handle data source failures gracefully
+  capabilities:
+  - Implement market data fetching (daily/intraday) via akshare
+  - Data caching and watchlist management
+  - Handle data source failures gracefully
+  tools:
+  - name: src/trading_system/core/
+    access: read
+  - name: task.yaml
+    access: read
+  - name: src/trading_system/data/
+    access: write
+  scope:
+    can_read:
+    - src/trading_system/core/
+    - task.yaml
+    can_write:
+    - src/trading_system/data/
+    can_execute:
+    - python orchestrator.py --verify
+    - python guard.py --check
+  boundaries:
+    cannot:
+    - Make trading decisions
+    - Modify risk parameters
+    max_context_lines: 2000
+    requires_human_review: false
+  handoff:
+    input_format:
+    - src/trading_system/core/
+    - task.yaml
+    output_format:
+    - src/trading_system/data/
+  verification:
+    self_check: Run verification before marking complete
+    external_check: orchestrator.py --verify must pass
+  assigned_workflows:
+  - main
+  assigned_criteria:
+  - 'AC2: Full daily pipeline runs end-to-end: scan → score → strategy fusion → risk
+    → report'

@@ -1,0 +1,50 @@
+agent:
+  name: risk-engineer
+  role: Implement position sizing (2% rule); Stop loss enforcement; Max drawdown circuit
+    breaker (20%); Daily loss breaker (5% / 3-day cooldown); Audit logging enforcement
+  capabilities:
+  - Implement position sizing (2% rule)
+  - Stop loss enforcement
+  - Max drawdown circuit breaker (20%)
+  - Daily loss breaker (5% / 3-day cooldown)
+  - Audit logging enforcement
+  tools:
+  - name: src/trading_system/core/
+    access: read
+  - name: task.yaml
+    access: read
+  - name: constraints/architecture-rules.yaml
+    access: read
+  - name: src/trading_system/risk/
+    access: write
+  scope:
+    can_read:
+    - src/trading_system/core/
+    - task.yaml
+    - constraints/architecture-rules.yaml
+    can_write:
+    - src/trading_system/risk/
+    can_execute:
+    - python orchestrator.py --verify
+    - python guard.py --check
+  boundaries:
+    cannot:
+    - Relax risk limits without approval
+    - Disable circuit breakers
+    max_context_lines: 2000
+    requires_human_review: true
+  handoff:
+    input_format:
+    - src/trading_system/core/
+    - task.yaml
+    - constraints/architecture-rules.yaml
+    output_format:
+    - src/trading_system/risk/
+  verification:
+    self_check: Run verification before marking complete
+    external_check: orchestrator.py --verify must pass
+  assigned_workflows:
+  - main
+  assigned_criteria:
+  - 'AC5: Risk management enforces: position sizing, stop loss, max drawdown, circuit
+    breaker'

@@ -1,0 +1,138 @@
+version: 1
+description: "Automation/Trading domain advancement patterns — from basic to excellent"
+
+stages:
+  - name: "Basic"
+    description: "Core trading pipeline runs end-to-end"
+    indicators:
+      - "Daily scan → score → strategy fusion → risk → report pipeline executes"
+      - "Paper trading mode is default"
+      - "7 key backtest metrics produced"
+      - "Basic CLI with Click framework"
+
+  - name: "Solid"
+    description: "Production-ready for personal use"
+    innovations:
+      - id: "AT-I001"
+        name: "Circuit breaker system"
+        description: "Implement max drawdown (20%) and daily loss (5%) circuit breakers with 3-day cooldown"
+        category: "risk"
+        effort: "medium"
+        impact: "high"
+        trigger: "no automated risk circuit breakers"
+
+      - id: "AT-I002"
+        name: "Monte Carlo backtest"
+        description: "Add Monte Carlo simulation with P10/P25/P50/P75/P90 equity distribution and loss probability"
+        category: "correctness"
+        effort: "medium"
+        impact: "high"
+        trigger: "only single-path backtest"
+
+      - id: "AT-I003"
+        name: "Deflated Sharpe Ratio"
+        description: "Implement statistical significance test that penalizes multiple testing"
+        category: "correctness"
+        effort: "medium"
+        impact: "medium"
+        trigger: "using plain Sharpe ratio without multiple testing correction"
+
+      - id: "AT-I004"
+        name: "Structured output"
+        description: "All CLI commands produce JSON or Markdown structured output"
+        category: "usability"
+        effort: "low"
+        impact: "medium"
+        trigger: "unstructured text output"
+
+      - id: "AT-I005"
+        name: "Audit logging"
+        description: "Immutable hash-chain audit log for all orders, risk checks, and config changes"
+        category: "governance"
+        effort: "medium"
+        impact: "high"
+        trigger: "no audit trail"
+
+  - name: "Advanced"
+    description: "Professional-grade trading tool"
+    innovations:
+      - id: "AT-I010"
+        name: "Multi-factor scoring"
+        description: "Customizable multi-factor scoring with user-defined factor weights"
+        category: "strategy"
+        effort: "high"
+        impact: "high"
+        trigger: "single-factor strategy only"
+
+      - id: "AT-I011"
+        name: "Strategy backtest with custom parameters"
+        description: "Support custom strategy parameters for backtest comparison"
+        category: "strategy"
+        effort: "medium"
+        impact: "high"
+        trigger: "no parameter customization"
+
+      - id: "AT-I012"
+        name: "Rich terminal UI"
+        description: "Rich library integration for colored tables, progress bars, and live-updating dashboards"
+        category: "usability"
+        effort: "medium"
+        impact: "medium"
+        trigger: "plain text CLI output"
+
+      - id: "AT-I013"
+        name: "Config hot-reload"
+        description: "YAML config files support hot-reload without restart"
+        category: "usability"
+        effort: "medium"
+        impact: "medium"
+        trigger: "config changes require restart"
+
+      - id: "AT-I014"
+        name: "Walk-forward analysis"
+        description: "Walk-forward optimization to validate strategy robustness across time periods"
+        category: "correctness"
+        effort: "high"
+        impact: "high"
+        trigger: "only in-sample backtest"
+
+  - name: "Excellent"
+    description: "Institutional-grade trading system"
+    innovations:
+      - id: "AT-I020"
+        name: "Live broker integration"
+        description: "Integration with QMT/XTP broker APIs for live trading with --live flag"
+        category: "execution"
+        effort: "high"
+        impact: "high"
+        trigger: "paper trading only"
+
+      - id: "AT-I021"
+        name: "Real-time market data"
+        description: "Real-time intraday data feed for intraday trading strategies"
+        category: "data"
+        effort: "high"
+        impact: "high"
+        trigger: "daily data only"
+
+      - id: "AT-I022"
+        name: "Portfolio optimization"
+        description: "Modern Portfolio Theory based portfolio optimization with efficient frontier"
+        category: "strategy"
+        effort: "high"
+        impact: "high"
+        trigger: "single-stock focus"
+
+      - id: "AT-I023"
+        name: "Machine learning strategies"
+        description: "ML-based signal generation with feature engineering pipeline"
+        category: "strategy"
+        effort: "high"
+        impact: "high"
+        trigger: "rule-based strategies only"
+
+stage_to_novelty:
+  Basic: 1
+  Solid: 3
+  Advanced: 4
+  Excellent: 5

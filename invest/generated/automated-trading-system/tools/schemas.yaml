@@ -1,0 +1,101 @@
+# Tool schemas for automated trading system
+# Defines the tools available to agents in this project
+
+tools:
+  - name: fetch_market_data
+    description: "Fetch A-share market data (daily/intraday) via akshare"
+    parameters:
+      symbol:
+        type: string
+        description: "Stock symbol (e.g., 600519)"
+        required: true
+      period:
+        type: string
+        enum: [daily, 5min, 15min, 30min, 60min]
+        default: daily
+      start_date:
+        type: string
+        format: date
+        description: "Start date (YYYYMMDD)"
+      end_date:
+        type: string
+        format: date
+        description: "End date (YYYYMMDD)"
+
+  - name: run_strategy_backtest
+    description: "Run backtest for a given strategy on a symbol"
+    parameters:
+      strategy:
+        type: string
+        enum: [trend_following, mean_reversion, breakout]
+        required: true
+      symbol:
+        type: string
+        required: true
+      params:
+        type: object
+        description: "Strategy-specific parameters as JSON"
+      capital:
+        type: number
+        default: 100000
+
+  - name: run_daily_pipeline
+    description: "Execute full daily pipeline: scan → score → fusion → risk → report"
+    parameters:
+      candidates:
+        type: integer
+        default: 200
+        description: "Number of candidates to scan"
+      top:
+        type: integer
+        default: 30
+        description: "Top N stocks to include in report"
+      mode:
+        type: string
+        enum: [paper, live]
+        default: paper
+
+  - name: analyze_sentiment
+    description: "Analyze market sentiment using 6-dimension scoring"
+    parameters:
+      index_symbol:
+        type: string
+        default: "000001"
+        description: "Index symbol (default: 上证指数)"
+
+  - name: research_symbol
+    description: "Run fundamental research analysis on a symbol"
+    parameters:
+      symbol:
+        type: string
+        required: true
+
+  - name: optimize_portfolio
+    description: "Run portfolio optimization"
+    parameters:
+      symbols:
+        type: array
+        items: string
+        required: true
+      method:
+        type: string
+        enum: [markowitz, risk_parity, hrp]
+        default: risk_parity
+
+  - name: find_pairs
+    description: "Discover cointegrated pairs for statistical arbitrage"
+    parameters:
+      symbols:
+        type: array
+        items: string
+        description: "Stock pool to scan for pairs"
+
+  - name: run_tests
+    description: "Run test suite"
+    parameters:
+      module:
+        type: string
+        description: "Specific test module (e.g., test_backtest)"
+      verbose:
+        type: boolean
+        default: false

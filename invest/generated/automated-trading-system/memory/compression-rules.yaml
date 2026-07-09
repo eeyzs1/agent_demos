@@ -1,0 +1,37 @@
+version: 1
+description: Memory compression rules for automated trading system
+
+rules:
+  keep_verbatim:
+    - "constraints/**"
+    - "decisions/**"
+    - "architecture-rules.yaml"
+    - "genome.yaml"
+    - "config/risk-limits.yaml"
+    - "config/strategy-params.yaml"
+  keep_verbatim_reason: "Risk limits, strategy parameters, and core rules must never be compressed"
+
+  summarize:
+    - pattern: "backtest-results/**"
+      max_age_days: 30
+      method: "keep 7 key metrics summary (win_rate, R_multiple, max_drawdown, risk_pct, annual_return, max_consecutive_losses, sharpe_ratio), discard per-trade details"
+    - pattern: "market-data/**"
+      max_age_days: 7
+      method: "keep data source metadata and date range, discard raw OHLCV data"
+    - pattern: "scan-results/**"
+      max_age_days: 14
+      method: "keep top-N stock codes and scores, discard full screening output"
+    - pattern: "session-state.yaml"
+      max_age_days: 30
+      method: "keep final status and completion evidence, discard intermediate states"
+
+  forget:
+    - pattern: "temp/**"
+      max_age_days: 1
+      reason: "Temporary files have no lasting value"
+    - pattern: "cache/**"
+      max_age_days: 0
+      reason: "Cache is disposable by definition"
+    - pattern: "logs/debug/**"
+      max_age_days: 3
+      reason: "Debug logs are verbose and have limited value after issues are resolved"

@@ -1,0 +1,36 @@
+version: 1
+description: Retry strategies per error type — automated trading system
+
+strategies:
+  market_data_fetch_error:
+    error_types: [connection_timeout, connection_reset, service_unavailable, http_429, http_503]
+    strategy: exponential_backoff
+    max_retries: 3
+    initial_delay_seconds: 5
+    max_delay_seconds: 60
+    backoff_multiplier: 2
+    action: "Retry akshare data fetch with exponential backoff; if all retries fail, skip stock and log warning"
+
+  data_parse_error:
+    error_types: [value_error, type_error, key_error, json_decode_error]
+    strategy: immediate_with_fix_hint
+    max_retries: 1
+    action: "Attempt to parse with alternative encoding or fallback column names; retry once"
+
+  file_io_error:
+    error_types: [file_not_found, permission_denied]
+    strategy: no_retry
+    max_retries: 0
+    action: "Report error with full path and permission details; do not retry"
+
+  config_error:
+    error_types: [yaml_parse_error, schema_mismatch, missing_required_field]
+    strategy: no_retry
+    max_retries: 0
+    action: "Report config validation error with exact field and expected format; do not retry"
+
+  resource_error:
+    error_types: [memory_error, disk_full]
+    strategy: retry_with_alternative
+    max_retries: 1
+    action: "Attempt with reduced batch size or alternative output path; retry once"

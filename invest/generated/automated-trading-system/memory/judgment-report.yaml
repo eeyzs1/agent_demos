@@ -1,0 +1,41 @@
+criteria:
+- criterion: 'AC1: Paper trading mode is default; live trading requires explicit --live
+    flag'
+  evidence: Not found in completed_criteria
+  verdict: NOT_PROVEN
+- criterion: 'AC2: Full daily pipeline runs end-to-end: scan → score → strategy fusion
+    → risk → report'
+  evidence: Not found in completed_criteria
+  verdict: NOT_PROVEN
+- criterion: 'AC3: Backtest engine produces 7 key metrics (win rate, R/R, max drawdown,
+    risk%, annual return, max consecutive losses, R-multiple)'
+  evidence: Not found in completed_criteria
+  verdict: NOT_PROVEN
+- criterion: 'AC4: Monte Carlo backtest outputs P10/P25/P50/P75/P90 equity distribution
+    and loss probability'
+  evidence: Not found in completed_criteria
+  verdict: NOT_PROVEN
+- criterion: 'AC5: Risk management enforces: position sizing, stop loss, max drawdown,
+    circuit breaker'
+  evidence: Not found in completed_criteria
+  verdict: NOT_PROVEN
+- criterion: 'AC6: All CLI commands produce structured output (JSON or Markdown)'
+  evidence: Not found in completed_criteria
+  verdict: NOT_PROVEN
+- criterion: 'AC7: Strategy backtest with custom parameters is supported'
+  evidence: Not found in completed_criteria
+  verdict: NOT_PROVEN
+- criterion: 'AC8: Deflated Sharpe Ratio significance test correctly penalizes multiple
+    testing'
+  evidence: Not found in completed_criteria
+  verdict: NOT_PROVEN
+goal: Automated quantitative trading CLI system for A-share retail investors
+insufficient_evidence: 0
+not_proven: 8
+project: automated-trading-system
+proven: 0
+timestamp: '2026-07-09T15:46:52.893965'
+total_criteria: 8
+verdict: NOT_PROVEN
+verification_passed: null
+verification_run: false

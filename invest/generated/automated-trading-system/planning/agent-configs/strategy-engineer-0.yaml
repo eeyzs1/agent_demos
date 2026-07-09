@@ -1,0 +1,63 @@
+agent:
+  name: strategy-engineer-0
+  role: 'Implement strategy engine: trend following, mean reversion, breakout; Multi-factor
+    scoring and pipeline; Portfolio optimization: Markowitz, Risk Parity, HRP; Statistical
+    arbitrage: cointegration, PCA, HMM, Kalman filter'
+  capabilities:
+  - 'Implement strategy engine: trend following, mean reversion, breakout'
+  - Multi-factor scoring and pipeline
+  - 'Portfolio optimization: Markowitz, Risk Parity, HRP'
+  - 'Statistical arbitrage: cointegration, PCA, HMM, Kalman filter'
+  tools:
+  - name: src/trading_system/data/
+    access: read
+  - name: src/trading_system/core/
+    access: read
+  - name: constraints/architecture-rules.yaml
+    access: read
+  - name: src/trading_system/strategy/
+    access: write
+  - name: src/trading_system/pipeline/
+    access: write
+  - name: src/trading_system/portfolio/
+    access: write
+  - name: src/trading_system/ml/
+    access: write
+  scope:
+    can_read:
+    - src/trading_system/data/
+    - src/trading_system/core/
+    - constraints/architecture-rules.yaml
+    can_write:
+    - src/trading_system/strategy/
+    - src/trading_system/pipeline/
+    - src/trading_system/portfolio/
+    - src/trading_system/ml/
+    can_execute:
+    - python orchestrator.py --verify
+    - python guard.py --check
+  boundaries:
+    cannot:
+    - Execute real trades
+    - Bypass risk management
+    max_context_lines: 3000
+    requires_human_review: false
+  handoff:
+    input_format:
+    - src/trading_system/data/
+    - src/trading_system/core/
+    - constraints/architecture-rules.yaml
+    output_format:
+    - src/trading_system/strategy/
+    - src/trading_system/pipeline/
+    - src/trading_system/portfolio/
+    - src/trading_system/ml/
+  verification:
+    self_check: Run verification before marking complete
+    external_check: orchestrator.py --verify must pass
+  assigned_workflows:
+  - main
+  assigned_criteria:
+  - 'AC2: Full daily pipeline runs end-to-end: scan → score → strategy fusion → risk
+    → report'
+  - 'AC7: Strategy backtest with custom parameters is supported'

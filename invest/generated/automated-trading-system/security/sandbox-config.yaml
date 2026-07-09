@@ -1,0 +1,81 @@
+version: 1
+description: Security sandbox configuration — automated trading system
+
+environment:
+  type: local
+  python_version: "3.12"
+  isolation_level: process
+  virtual_env: required
+
+network:
+  allow_outbound:
+    - "pypi.org:443"
+    - "files.pythonhosted.org:443"
+    - "akshare.akfamily.xyz:443"
+    - "push2his.eastmoney.com:443"
+    - "push2.eastmoney.com:443"
+    - "datacenter.eastmoney.com:443"
+    - "emweb.securities.eastmoney.com:443"
+    - "quote.eastmoney.com:443"
+  block_outbound:
+    - "0.0.0.0/0"
+  allow_inbound: []
+  dns_allowlist:
+    - "pypi.org"
+    - "files.pythonhosted.org"
+    - "akshare.akfamily.xyz"
+    - "eastmoney.com"
+
+filesystem:
+  read_only_paths:
+    - "/usr"
+    - "/lib"
+    - "/opt"
+  read_write_paths:
+    - "/workspace"
+    - "/tmp"
+    - "./data"
+    - "./output"
+    - "./config"
+    - "./src"
+    - "./tests"
+  blocked_paths:
+    - "/etc/shadow"
+    - "/etc/passwd"
+    - "/root/.ssh"
+    - "/root/.aws"
+    - "/root/.gnupg"
+    - "~/.ssh"
+    - "~/.aws"
+
+capabilities:
+  drop_all: true
+  add:
+    - NET_BIND_SERVICE
+
+seccomp:
+  profile: default
+  allow_syscalls:
+    - read
+    - write
+    - open
+    - close
+    - stat
+    - fstat
+    - lstat
+    - poll
+    - lseek
+    - mmap
+    - mprotect
+    - munmap
+    - brk
+    - rt_sigaction
+    - rt_sigprocmask
+    - ioctl
+    - access
+    - pipe
+    - select
+    - sched_yield
+    - mremap
+    - nanosleep
+    - clock_gettime

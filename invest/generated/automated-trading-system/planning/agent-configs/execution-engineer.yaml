@@ -1,0 +1,49 @@
+agent:
+  name: execution-engineer
+  role: Implement paper trading execution engine; --live flag gating for real trading;
+    Market impact cost estimation; TWAP/VWAP/IS execution plans; TCA reporting
+  capabilities:
+  - Implement paper trading execution engine
+  - --live flag gating for real trading
+  - Market impact cost estimation
+  - TWAP/VWAP/IS execution plans
+  - TCA reporting
+  tools:
+  - name: src/trading_system/risk/
+    access: read
+  - name: src/trading_system/pipeline/
+    access: read
+  - name: task.yaml
+    access: read
+  - name: src/trading_system/execution/
+    access: write
+  scope:
+    can_read:
+    - src/trading_system/risk/
+    - src/trading_system/pipeline/
+    - task.yaml
+    can_write:
+    - src/trading_system/execution/
+    can_execute:
+    - python orchestrator.py --verify
+    - python guard.py --check
+  boundaries:
+    cannot:
+    - Execute live trades without --live flag
+    - Skip risk checks
+    max_context_lines: 2000
+    requires_human_review: true
+  handoff:
+    input_format:
+    - src/trading_system/risk/
+    - src/trading_system/pipeline/
+    - task.yaml
+    output_format:
+    - src/trading_system/execution/
+  verification:
+    self_check: Run verification before marking complete
+    external_check: orchestrator.py --verify must pass
+  assigned_workflows:
+  - main
+  assigned_criteria:
+  - 'AC1: Paper trading mode is default; live trading requires explicit --live flag'

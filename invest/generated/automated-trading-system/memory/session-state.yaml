@@ -1,0 +1,48 @@
+status: initialized
+phase: GENERATE
+progress:
+  acceptance_criteria:
+    - id: AC1
+      description: "Paper trading mode is default; live trading requires explicit --live flag"
+      status: pending
+      verifier: "tests/test_execution.py"
+      traces_to: "Risk management safety constraint"
+    - id: AC2
+      description: "Full daily pipeline runs end-to-end: scan → score → strategy fusion → risk → report"
+      status: pending
+      verifier: "tests/test_pipeline.py"
+      traces_to: "Core workflow completeness"
+    - id: AC3
+      description: "Backtest engine produces 7 key metrics"
+      status: pending
+      verifier: "tests/test_backtest.py"
+      traces_to: "Backtest quality"
+    - id: AC4
+      description: "Monte Carlo backtest outputs P10/P25/P50/P75/P90 equity distribution and loss probability"
+      status: pending
+      verifier: "tests/test_backtest.py::test_monte_carlo"
+      traces_to: "Statistical rigor"
+    - id: AC5
+      description: "Risk management enforces: position sizing, stop loss, max drawdown, circuit breaker"
+      status: pending
+      verifier: "tests/test_risk.py"
+      traces_to: "Capital preservation"
+    - id: AC6
+      description: "All CLI commands produce structured output (JSON or Markdown)"
+      status: pending
+      verifier: "tests/test_cli.py"
+      traces_to: "Automation compatibility"
+    - id: AC7
+      description: "Strategy backtest with custom parameters is supported"
+      status: pending
+      verifier: "tests/test_strategy.py"
+      traces_to: "Strategy extensibility"
+    - id: AC8
+      description: "Deflated Sharpe Ratio significance test correctly penalizes multiple testing"
+      status: pending
+      verifier: "tests/test_backtest.py::test_deflated_sharpe"
+      traces_to: "Statistical validity"
+  completed_criteria: []
+  failed_criteria: []
+guard_log: []
+blockers: []

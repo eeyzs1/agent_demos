@@ -1,0 +1,53 @@
+version: 1
+description: Custom linter configuration for automated trading system
+
+rules:
+  no_bare_except:
+    severity: error
+    message: "Use explicit exception types, not bare except"
+    patterns:
+      - "except:"
+      - "except Exception:"
+
+  audit_log_on_control_commands:
+    severity: error
+    message: "All order placement, risk checks, and config mutations must call audit_append"
+    patterns:
+      - "order placement without audit_log call"
+      - "risk check without audit_log call"
+      - "config mutation without audit_log call"
+
+  timeout_on_external_calls:
+    severity: warning
+    message: "All akshare data fetch calls must have a timeout"
+    patterns:
+      - "akshare function call without timeout parameter"
+
+  type_hints_required:
+    severity: warning
+    message: "All public functions must have type annotations"
+    check: "public functions in src/trading_system/ should have parameter and return type hints"
+
+  no_hardcoded_credentials:
+    severity: error
+    message: "Broker credentials and API keys must be loaded from config, not hardcoded"
+    patterns:
+      - "api_key\\s*=\\s*['\"]"
+      - "password\\s*=\\s*['\"]"
+      - "token\\s*=\\s*['\"]"
+
+  idempotent_risk_checks:
+    severity: warning
+    message: "Risk check functions should be idempotent"
+    check: "Risk management functions should produce same result for same input state"
+
+  no_silent_data_drop:
+    severity: error
+    message: "Market data fetch failures must be logged, not silently dropped"
+    patterns:
+      - "try-except around data fetch without logging"
+
+  paper_trading_default:
+    severity: error
+    message: "Live trading must require explicit --live flag; paper trading is default"
+    check: "Execution module must check for --live flag before placing real orders"

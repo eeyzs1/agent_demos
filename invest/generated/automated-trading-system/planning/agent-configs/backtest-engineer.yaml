@@ -1,0 +1,53 @@
+agent:
+  name: backtest-engineer
+  role: Implement backtest engine with 7 key metrics; Monte Carlo simulation with
+    probability distribution; Deflated Sharpe Ratio significance test; Ensure statistical
+    rigor
+  capabilities:
+  - Implement backtest engine with 7 key metrics
+  - Monte Carlo simulation with probability distribution
+  - Deflated Sharpe Ratio significance test
+  - Ensure statistical rigor
+  tools:
+  - name: src/trading_system/strategy/
+    access: read
+  - name: src/trading_system/data/
+    access: read
+  - name: constraints/architecture-rules.yaml
+    access: read
+  - name: src/trading_system/backtest/
+    access: write
+  scope:
+    can_read:
+    - src/trading_system/strategy/
+    - src/trading_system/data/
+    - constraints/architecture-rules.yaml
+    can_write:
+    - src/trading_system/backtest/
+    can_execute:
+    - python orchestrator.py --verify
+    - python guard.py --check
+  boundaries:
+    cannot:
+    - Modify strategy logic
+    - Access live trading
+    max_context_lines: 2500
+    requires_human_review: false
+  handoff:
+    input_format:
+    - src/trading_system/strategy/
+    - src/trading_system/data/
+    - constraints/architecture-rules.yaml
+    output_format:
+    - src/trading_system/backtest/
+  verification:
+    self_check: Run verification before marking complete
+    external_check: orchestrator.py --verify must pass
+  assigned_workflows:
+  - main
+  assigned_criteria:
+  - 'AC3: Backtest engine produces 7 key metrics (win rate, R/R, max drawdown, risk%,
+    annual return, max consecutive losses, R-multiple)'
+  - 'AC4: Monte Carlo backtest outputs P10/P25/P50/P75/P90 equity distribution and
+    loss probability'
+  - 'AC8: Deflated Sharpe Ratio significance test correctly penalizes multiple testing'

@@ -1,0 +1,44 @@
+# Budget configuration for automated trading system
+# Full tier (S=5, C=4, N=3, K=3) — large scope with high criticality
+
+global:
+  max_reasoning_steps: 50
+  max_tokens_per_step: 8000
+  max_retries_per_work_unit: 3
+  total_token_budget: 2000000
+  max_parallel_agents: 4
+  timeout_minutes_per_work_unit: 30
+
+per_role_budget:
+  core-engineer:
+    max_reasoning_steps: 15
+    max_tokens: 120000
+  data-engineer:
+    max_reasoning_steps: 20
+    max_tokens: 160000
+  strategy-engineer:
+    max_reasoning_steps: 40
+    max_tokens: 500000
+  backtest-engineer:
+    max_reasoning_steps: 25
+    max_tokens: 250000
+  risk-engineer:
+    max_reasoning_steps: 20
+    max_tokens: 180000
+  execution-engineer:
+    max_reasoning_steps: 20
+    max_tokens: 180000
+  research-engineer:
+    max_reasoning_steps: 20
+    max_tokens: 200000
+  cli-engineer:
+    max_reasoning_steps: 25
+    max_tokens: 200000
+  verifier:
+    max_reasoning_steps: 15
+    max_tokens: 150000
+
+cost_thresholds:
+  warning_total_tokens: 1500000
+  critical_total_tokens: 2000000
+  warning_per_step_tokens: 6000

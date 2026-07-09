@@ -1,0 +1,48 @@
+agent:
+  name: core-engineer
+  role: 'Build core infrastructure: event bus, configuration management, audit logging;
+    Ensure all components communicate through the event bus'
+  capabilities:
+  - 'Build core infrastructure: event bus, configuration management, audit logging'
+  - Ensure all components communicate through the event bus
+  tools:
+  - name: task.yaml
+    access: read
+  - name: constraints/architecture-rules.yaml
+    access: read
+  - name: src/trading_system/core/
+    access: write
+  - name: config/default.yaml
+    access: write
+  scope:
+    can_read:
+    - task.yaml
+    - constraints/architecture-rules.yaml
+    can_write:
+    - src/trading_system/core/
+    - config/default.yaml
+    can_execute:
+    - python orchestrator.py --verify
+    - python guard.py --check
+  boundaries:
+    cannot:
+    - Implement trading logic
+    - Access market data APIs
+    max_context_lines: 2000
+    requires_human_review: false
+  handoff:
+    input_format:
+    - task.yaml
+    - constraints/architecture-rules.yaml
+    output_format:
+    - src/trading_system/core/
+    - config/default.yaml
+  verification:
+    self_check: Run verification before marking complete
+    external_check: orchestrator.py --verify must pass
+  assigned_workflows:
+  - main
+  assigned_criteria:
+  - 'AC5: Risk management enforces: position sizing, stop loss, max drawdown, circuit
+    breaker'
+  - 'AC6: All CLI commands produce structured output (JSON or Markdown)'

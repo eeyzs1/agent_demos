@@ -1,0 +1,94 @@
+version: 1
+description: Metrics dashboard configuration — automated trading system
+
+metrics:
+  - name: win_rate
+    type: gauge
+    description: "Percentage of winning trades"
+    unit: percent
+    target: 50
+    alert_threshold: 30
+
+  - name: sharpe_ratio
+    type: gauge
+    description: "Risk-adjusted return (Deflated Sharpe Ratio)"
+    unit: ratio
+    target: 1.0
+    alert_threshold: 0.0
+
+  - name: max_drawdown_pct
+    type: gauge
+    description: "Maximum drawdown from peak"
+    unit: percent
+    target: 10
+    alert_threshold: 20
+
+  - name: daily_pnl
+    type: gauge
+    description: "Daily profit and loss"
+    unit: cny
+    alert_threshold: -5
+
+  - name: annual_return_pct
+    type: gauge
+    description: "Annualized return"
+    unit: percent
+    target: 15
+
+  - name: r_multiple
+    type: gauge
+    description: "Average R-multiple per trade"
+    unit: ratio
+    target: 1.5
+
+  - name: max_consecutive_losses
+    type: counter
+    description: "Maximum consecutive losing trades"
+    alert_threshold: 8
+
+  - name: position_exposure_pct
+    type: gauge
+    description: "Current position exposure as percentage of total capital"
+    unit: percent
+    alert_threshold: 2
+
+  - name: strategy_signal_count
+    type: counter
+    description: "Number of signals generated per strategy"
+    labels: [strategy_name]
+
+  - name: data_fetch_error_rate
+    type: gauge
+    description: "Percentage of data fetch failures"
+    unit: percent
+    alert_threshold: 10
+
+  - name: verification_pass_rate
+    type: gauge
+    description: "Percentage of verification checks that pass"
+    unit: percent
+    target: 100
+
+  - name: constraint_violation_count
+    type: counter
+    description: "Number of constraint violations"
+    labels: [rule_id]
+    alert_threshold: 5
+
+  - name: token_consumption
+    type: counter
+    description: "Total tokens consumed"
+    labels: [agent_role, task_type]
+    budget: 100000
+
+dashboard:
+  refresh_interval_seconds: 30
+  panels:
+    - title: "Trading Performance"
+      metrics: [win_rate, sharpe_ratio, annual_return_pct, r_multiple]
+    - title: "Risk Management"
+      metrics: [max_drawdown_pct, daily_pnl, max_consecutive_losses, position_exposure_pct]
+    - title: "System Health"
+      metrics: [data_fetch_error_rate, verification_pass_rate, constraint_violation_count]
+    - title: "Resources"
+      metrics: [token_consumption]

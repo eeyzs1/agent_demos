@@ -1,0 +1,59 @@
+version: 1
+description: Data encryption and security rules — automated trading system
+
+encryption_at_rest:
+  enabled: true
+  algorithm: AES-256-GCM
+  key_management: environment_variable
+  scope:
+    - pattern: "config/broker/**"
+      reason: "Broker credentials and API keys must be encrypted at rest"
+    - pattern: "**/.env"
+      reason: "Environment files may contain broker credentials"
+    - pattern: "**/*credential*"
+      reason: "Credential files must be encrypted"
+    - pattern: "**/trade_history/**"
+      reason: "Trade history contains sensitive financial data"
+
+encryption_in_transit:
+  enabled: true
+  minimum_tls_version: "1.2"
+  enforce_https: true
+  certificate_pinning: false
+  note: "akshare uses HTTPS for all data fetches; broker API connections require TLS 1.2+"
+
+data_masking:
+  enabled: true
+  rules:
+    - field: broker_account
+      pattern: "^(\\w{2})(\\w+)(\\w{2})$"
+      replacement: "$1****$3"
+    - field: fund_account
+      pattern: "^(\\d{2})(\\d+)(\\d{2})$"
+      replacement: "$1****$3"
+    - field: phone_cn
+      pattern: "(\\d{3})\\d{4}(\\d{4})"
+      replacement: "$1****$2"
+
+access_control:
+  default: deny
+  rules:
+    - role: core-engineer
+      access: read_write_limited
+    - role: data-engineer
+      access: read_write_limited
+    - role: strategy-engineer
+      access: read_write_limited
+    - role: backtest-engineer
+      access: read_write_limited
+    - role: risk-engineer
+      access: read_write_limited
+    - role: execution-engineer
+      access: read_only
+      note: "Execution engineer cannot modify risk parameters or strategies"
+    - role: analysis-engineer
+      access: read_only_with_execute
+    - role: cli-engineer
+      access: read_only_with_execute
+    - role: security-reviewer
+      access: read_only

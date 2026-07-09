@@ -1,0 +1,70 @@
+mappings:
+  - path: "src/trading_system/core/"
+    domain: "infrastructure"
+    description: "Event bus, configuration management, audit logging"
+    tags: [event-bus, config, audit, core]
+
+  - path: "src/trading_system/data/"
+    domain: "market-data"
+    description: "A-share market data fetching via akshare, caching, watchlist"
+    tags: [akshare, data-fetching, caching, daily, intraday]
+
+  - path: "src/trading_system/strategy/"
+    domain: "trading-strategy"
+    description: "Strategy base class, trend following, mean reversion, breakout"
+    tags: [strategy, trend, mean-reversion, breakout, signals]
+
+  - path: "src/trading_system/pipeline/"
+    domain: "trading-pipeline"
+    description: "Full market scan, multi-factor scoring, strategy fusion"
+    tags: [screening, scoring, pipeline, fusion]
+
+  - path: "src/trading_system/backtest/"
+    domain: "backtest"
+    description: "Backtest engine, Monte Carlo simulation, significance testing"
+    tags: [backtest, monte-carlo, sharpe, metrics]
+
+  - path: "src/trading_system/risk/"
+    domain: "risk-management"
+    description: "Position sizing, stop loss, circuit breaker, drawdown limits"
+    tags: [risk, position-sizing, stop-loss, circuit-breaker]
+
+  - path: "src/trading_system/execution/"
+    domain: "trade-execution"
+    description: "Paper trading, impact cost, TWAP/VWAP/IS, TCA reporting"
+    tags: [execution, paper-trading, twap, vwap, tca]
+
+  - path: "src/trading_system/sentiment/"
+    domain: "sentiment-analysis"
+    description: "6-dimension sentiment scoring, hotspot detection, persistence"
+    tags: [sentiment, hotspot, market-mood]
+
+  - path: "src/trading_system/research/"
+    domain: "fundamental-research"
+    description: "News analysis, research reports, announcements, risk warnings"
+    tags: [research, news, reports, fundamental]
+
+  - path: "src/trading_system/portfolio/"
+    domain: "portfolio-optimization"
+    description: "Covariance estimation, Markowitz, Risk Parity, HRP, factor models"
+    tags: [portfolio, markowitz, risk-parity, hrp, covariance]
+
+  - path: "src/trading_system/ml/"
+    domain: "statistical-ml"
+    description: "HMM regime detection, Kalman filter, volatility forecasting, microstructure"
+    tags: [hmm, kalman, volatility, ml, statistics]
+
+  - path: "src/trading_system/cli/"
+    domain: "cli-interface"
+    description: "Click-based CLI with Rich terminal UI, structured output"
+    tags: [cli, click, rich, commands]
+
+  - path: "config/"
+    domain: "configuration"
+    description: "YAML configuration files, hot-reloadable"
+    tags: [config, yaml, hot-reload]
+
+  - path: "tests/"
+    domain: "testing"
+    description: "Test suite for all modules"
+    tags: [tests, pytest, integration]

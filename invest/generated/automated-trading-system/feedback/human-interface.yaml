@@ -1,0 +1,36 @@
+version: 1
+description: Human intervention interface configuration — automated trading system (C=4)
+
+approval_queue:
+  requires_approval:
+    - action: "enable live trading"
+      reason: "Live trading with real money requires explicit human authorization"
+      trigger: "detection of --live flag"
+    - action: "modify risk limits"
+      reason: "Risk parameter changes affect all trading decisions"
+    - action: "modify broker configuration"
+      reason: "Broker credentials and connection settings are security-critical"
+    - action: "circuit breaker override"
+      reason: "Overriding circuit breaker must be a deliberate human decision"
+    - action: "modify strategy parameters"
+      reason: "Strategy changes affect trading behavior and risk profile"
+    - action: "delete trade history"
+      reason: "Irreversible operation affecting audit trail"
+
+escalation_rules:
+  - condition: "3 consecutive data fetch failures"
+    action: "escalate to human with affected stock codes and failure details"
+  - condition: "circuit breaker triggered (drawdown > 20% or daily loss > 5%)"
+    action: "escalate to human immediately with full risk report and 3-day cooldown notice"
+  - condition: "verification loop exhausted"
+    action: "escalate to human with partial results"
+  - condition: "budget exceeded"
+    action: "escalate to human with progress summary"
+  - condition: "security guardrail triggered"
+    action: "escalate to human immediately — do not auto-retry"
+  - condition: "backtest produces Sharpe ratio < 0 or win rate < 30%"
+    action: "escalate to human with backtest summary — strategy may be invalid"
+
+notification:
+  channels: ["console"]
+  format: "structured YAML with decision context and risk impact summary"

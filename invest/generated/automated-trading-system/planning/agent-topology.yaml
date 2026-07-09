@@ -1,0 +1,451 @@
+topology:
+  total_agents: 10
+  roles:
+  - core-engineer
+  - data-engineer
+  - strategy-engineer-0
+  - strategy-engineer-1
+  - backtest-engineer
+  - risk-engineer
+  - execution-engineer
+  - research-engineer
+  - cli-engineer
+  - verifier
+  parallel_groups:
+  - - core-engineer
+  - - execution-engineer
+  - - strategy-engineer-0
+  - - data-engineer
+  - - risk-engineer
+  - - strategy-engineer-1
+  - - research-engineer
+  - - cli-engineer
+  - - backtest-engineer
+  - - verifier
+  sequential_chain:
+  - core-engineer
+  - execution-engineer
+  - strategy-engineer-0
+  - data-engineer
+  - risk-engineer
+  - strategy-engineer-1
+  - research-engineer
+  - cli-engineer
+  - backtest-engineer
+  - verifier
+  handoff_points:
+  - from: core-engineer
+    to: data-engineer
+    format: src/trading_system/core/
+  - from: core-engineer
+    to: data-engineer
+    format: config/default.yaml
+  - from: core-engineer
+    to: strategy-engineer-0
+    format: src/trading_system/core/
+  - from: core-engineer
+    to: strategy-engineer-0
+    format: config/default.yaml
+  - from: core-engineer
+    to: strategy-engineer-1
+    format: src/trading_system/core/
+  - from: core-engineer
+    to: strategy-engineer-1
+    format: config/default.yaml
+  - from: core-engineer
+    to: backtest-engineer
+    format: src/trading_system/core/
+  - from: core-engineer
+    to: backtest-engineer
+    format: config/default.yaml
+  - from: core-engineer
+    to: risk-engineer
+    format: src/trading_system/core/
+  - from: core-engineer
+    to: risk-engineer
+    format: config/default.yaml
+  - from: core-engineer
+    to: execution-engineer
+    format: src/trading_system/core/
+  - from: core-engineer
+    to: execution-engineer
+    format: config/default.yaml
+  - from: core-engineer
+    to: research-engineer
+    format: src/trading_system/core/
+  - from: core-engineer
+    to: cli-engineer
+    format: src/trading_system/core/
+  - from: core-engineer
+    to: verifier
+    format: src/trading_system/core/
+  - from: core-engineer
+    to: verifier
+    format: config/default.yaml
+  - from: data-engineer
+    to: strategy-engineer-0
+    format: src/trading_system/data/
+  - from: data-engineer
+    to: strategy-engineer-1
+    format: src/trading_system/data/
+  - from: data-engineer
+    to: backtest-engineer
+    format: src/trading_system/data/
+  - from: data-engineer
+    to: risk-engineer
+    format: src/trading_system/data/
+  - from: data-engineer
+    to: execution-engineer
+    format: src/trading_system/data/
+  - from: data-engineer
+    to: research-engineer
+    format: src/trading_system/data/
+  - from: data-engineer
+    to: cli-engineer
+    format: src/trading_system/data/
+  - from: data-engineer
+    to: verifier
+    format: src/trading_system/data/
+  - from: strategy-engineer-0
+    to: data-engineer
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-0
+    to: data-engineer
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-0
+    to: data-engineer
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-0
+    to: data-engineer
+    format: src/trading_system/ml/
+  - from: strategy-engineer-0
+    to: strategy-engineer-1
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-0
+    to: strategy-engineer-1
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-0
+    to: strategy-engineer-1
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-0
+    to: strategy-engineer-1
+    format: src/trading_system/ml/
+  - from: strategy-engineer-0
+    to: backtest-engineer
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-0
+    to: backtest-engineer
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-0
+    to: backtest-engineer
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-0
+    to: backtest-engineer
+    format: src/trading_system/ml/
+  - from: strategy-engineer-0
+    to: risk-engineer
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-0
+    to: risk-engineer
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-0
+    to: risk-engineer
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-0
+    to: risk-engineer
+    format: src/trading_system/ml/
+  - from: strategy-engineer-0
+    to: execution-engineer
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-0
+    to: execution-engineer
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-0
+    to: execution-engineer
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-0
+    to: execution-engineer
+    format: src/trading_system/ml/
+  - from: strategy-engineer-0
+    to: research-engineer
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-0
+    to: research-engineer
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-0
+    to: research-engineer
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-0
+    to: research-engineer
+    format: src/trading_system/ml/
+  - from: strategy-engineer-0
+    to: cli-engineer
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-0
+    to: cli-engineer
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-0
+    to: cli-engineer
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-0
+    to: cli-engineer
+    format: src/trading_system/ml/
+  - from: strategy-engineer-0
+    to: verifier
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-0
+    to: verifier
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-0
+    to: verifier
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-0
+    to: verifier
+    format: src/trading_system/ml/
+  - from: strategy-engineer-1
+    to: data-engineer
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-1
+    to: data-engineer
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-1
+    to: data-engineer
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-1
+    to: data-engineer
+    format: src/trading_system/ml/
+  - from: strategy-engineer-1
+    to: strategy-engineer-0
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-1
+    to: strategy-engineer-0
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-1
+    to: strategy-engineer-0
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-1
+    to: strategy-engineer-0
+    format: src/trading_system/ml/
+  - from: strategy-engineer-1
+    to: backtest-engineer
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-1
+    to: backtest-engineer
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-1
+    to: backtest-engineer
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-1
+    to: backtest-engineer
+    format: src/trading_system/ml/
+  - from: strategy-engineer-1
+    to: risk-engineer
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-1
+    to: risk-engineer
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-1
+    to: risk-engineer
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-1
+    to: risk-engineer
+    format: src/trading_system/ml/
+  - from: strategy-engineer-1
+    to: execution-engineer
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-1
+    to: execution-engineer
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-1
+    to: execution-engineer
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-1
+    to: execution-engineer
+    format: src/trading_system/ml/
+  - from: strategy-engineer-1
+    to: research-engineer
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-1
+    to: research-engineer
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-1
+    to: research-engineer
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-1
+    to: research-engineer
+    format: src/trading_system/ml/
+  - from: strategy-engineer-1
+    to: cli-engineer
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-1
+    to: cli-engineer
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-1
+    to: cli-engineer
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-1
+    to: cli-engineer
+    format: src/trading_system/ml/
+  - from: strategy-engineer-1
+    to: verifier
+    format: src/trading_system/strategy/
+  - from: strategy-engineer-1
+    to: verifier
+    format: src/trading_system/pipeline/
+  - from: strategy-engineer-1
+    to: verifier
+    format: src/trading_system/portfolio/
+  - from: strategy-engineer-1
+    to: verifier
+    format: src/trading_system/ml/
+  - from: backtest-engineer
+    to: data-engineer
+    format: src/trading_system/backtest/
+  - from: backtest-engineer
+    to: strategy-engineer-0
+    format: src/trading_system/backtest/
+  - from: backtest-engineer
+    to: strategy-engineer-1
+    format: src/trading_system/backtest/
+  - from: backtest-engineer
+    to: risk-engineer
+    format: src/trading_system/backtest/
+  - from: backtest-engineer
+    to: execution-engineer
+    format: src/trading_system/backtest/
+  - from: backtest-engineer
+    to: research-engineer
+    format: src/trading_system/backtest/
+  - from: backtest-engineer
+    to: cli-engineer
+    format: src/trading_system/backtest/
+  - from: backtest-engineer
+    to: verifier
+    format: src/trading_system/backtest/
+  - from: risk-engineer
+    to: data-engineer
+    format: src/trading_system/risk/
+  - from: risk-engineer
+    to: strategy-engineer-0
+    format: src/trading_system/risk/
+  - from: risk-engineer
+    to: strategy-engineer-1
+    format: src/trading_system/risk/
+  - from: risk-engineer
+    to: backtest-engineer
+    format: src/trading_system/risk/
+  - from: risk-engineer
+    to: execution-engineer
+    format: src/trading_system/risk/
+  - from: risk-engineer
+    to: research-engineer
+    format: src/trading_system/risk/
+  - from: risk-engineer
+    to: cli-engineer
+    format: src/trading_system/risk/
+  - from: risk-engineer
+    to: verifier
+    format: src/trading_system/risk/
+  - from: execution-engineer
+    to: data-engineer
+    format: src/trading_system/execution/
+  - from: execution-engineer
+    to: strategy-engineer-0
+    format: src/trading_system/execution/
+  - from: execution-engineer
+    to: strategy-engineer-1
+    format: src/trading_system/execution/
+  - from: execution-engineer
+    to: backtest-engineer
+    format: src/trading_system/execution/
+  - from: execution-engineer
+    to: risk-engineer
+    format: src/trading_system/execution/
+  - from: execution-engineer
+    to: research-engineer
+    format: src/trading_system/execution/
+  - from: execution-engineer
+    to: cli-engineer
+    format: src/trading_system/execution/
+  - from: execution-engineer
+    to: verifier
+    format: src/trading_system/execution/
+  - from: research-engineer
+    to: data-engineer
+    format: src/trading_system/sentiment/
+  - from: research-engineer
+    to: data-engineer
+    format: src/trading_system/research/
+  - from: research-engineer
+    to: strategy-engineer-0
+    format: src/trading_system/sentiment/
+  - from: research-engineer
+    to: strategy-engineer-0
+    format: src/trading_system/research/
+  - from: research-engineer
+    to: strategy-engineer-1
+    format: src/trading_system/sentiment/
+  - from: research-engineer
+    to: strategy-engineer-1
+    format: src/trading_system/research/
+  - from: research-engineer
+    to: backtest-engineer
+    format: src/trading_system/sentiment/
+  - from: research-engineer
+    to: backtest-engineer
+    format: src/trading_system/research/
+  - from: research-engineer
+    to: risk-engineer
+    format: src/trading_system/sentiment/
+  - from: research-engineer
+    to: risk-engineer
+    format: src/trading_system/research/
+  - from: research-engineer
+    to: execution-engineer
+    format: src/trading_system/sentiment/
+  - from: research-engineer
+    to: execution-engineer
+    format: src/trading_system/research/
+  - from: research-engineer
+    to: cli-engineer
+    format: src/trading_system/sentiment/
+  - from: research-engineer
+    to: cli-engineer
+    format: src/trading_system/research/
+  - from: research-engineer
+    to: verifier
+    format: src/trading_system/sentiment/
+  - from: research-engineer
+    to: verifier
+    format: src/trading_system/research/
+  - from: cli-engineer
+    to: data-engineer
+    format: src/trading_system/cli/
+  - from: cli-engineer
+    to: strategy-engineer-0
+    format: src/trading_system/cli/
+  - from: cli-engineer
+    to: strategy-engineer-1
+    format: src/trading_system/cli/
+  - from: cli-engineer
+    to: backtest-engineer
+    format: src/trading_system/cli/
+  - from: cli-engineer
+    to: risk-engineer
+    format: src/trading_system/cli/
+  - from: cli-engineer
+    to: execution-engineer
+    format: src/trading_system/cli/
+  - from: cli-engineer
+    to: research-engineer
+    format: src/trading_system/cli/
+  - from: cli-engineer
+    to: verifier
+    format: src/trading_system/cli/
+  context_budget: 950
+  complexity_profile:
+    tier: full
+    scope: 5
+    criticality: 4
+    novelty: 3
+    coupling: 3

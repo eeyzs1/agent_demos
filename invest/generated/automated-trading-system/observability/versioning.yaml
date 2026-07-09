@@ -1,0 +1,35 @@
+version: 1
+description: Version and configuration management — automated trading system
+
+versioning:
+  harness_version: "1.0.0"
+  config_version: 1
+  last_updated: null
+
+  version_control:
+    type: git
+    branch_strategy: feature_branches
+    tag_pattern: "v*"
+
+  config_management:
+    track_changes: true
+    change_log: "memory/decisions.md"
+    require_reason: true
+    hot_reload: true
+    hot_reload_note: "Strategy params and risk limits support YAML config hot-reload without restart"
+
+  reproducibility:
+    pin_dependencies: true
+    lock_file: "requirements-lock.txt"
+    environment_file: ".python-version"
+    record_platform: true
+    strategy_versioning: true
+    strategy_versioning_note: "Each strategy run records git commit hash + config hash for full reproducibility"
+
+  compatibility:
+    breaking_change_policy: "major version bump"
+    deprecation_notice_periods_days: 30
+    migration_guide_required: true
+    strategy_compatibility:
+      rule: "Strategy parameter schema changes must be backward-compatible or bump major version"
+      config_migration: "Auto-migrate old config format on load with deprecation warning"

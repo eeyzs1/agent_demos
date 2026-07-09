@@ -1,0 +1,37 @@
+version: 1
+description: Resource and cost constraints — personal CLI trading system
+
+limits:
+  data_fetch:
+    max_batch_size: 500
+    max_stocks_per_scan: 5000
+    max_fetch_time_seconds: 120
+    rate_limit: "akshare free tier — no strict rate limit but avoid excessive requests"
+  backtest:
+    max_backtest_stocks: 100
+    max_backtest_days: 2520
+    max_backtest_time_seconds: 300
+    max_monte_carlo_simulations: 10000
+  strategy:
+    max_active_strategies: 10
+    max_factors_per_strategy: 20
+  runtime:
+    max_memory_mb: 2048
+    max_cpu_percent: 80
+  cost:
+    max_monthly_data_cost_usd: 0
+    max_monthly_broker_cost_usd: 0
+    max_monthly_compute_cost_usd: 0
+    note: "akshare is free; no cloud costs for local CLI tool"
+
+circuit_breakers:
+  max_drawdown_pct: 20
+  daily_loss_pct: 5
+  cooldown_days: 3
+  position_size_pct: 2
+  error_rate_threshold: 0.15
+  consecutive_failure_threshold: 5
+
+rate_limits:
+  akshare_calls_per_minute: 30
+  file_operations_per_minute: 200

@@ -1,0 +1,145 @@
+work_units:
+  - id: WU001
+    name: "Core infrastructure: event bus, config, audit logging"
+    assigned_to: core-engineer
+    workflow: main
+    depends_on: []
+    success_criteria: "EventBus dispatches events, ConfigManager loads YAML with hot-reload, AuditLogger writes immutable logs"
+    traces_to: [AC5, AC6]
+    constraints: [AR001, AR002]
+
+  - id: WU002
+    name: "Market data fetching: daily and intraday via akshare"
+    assigned_to: data-engineer
+    workflow: main
+    depends_on: [WU001]
+    success_criteria: "fetch daily data for 600519, fetch intraday 5min/15min/30min/60min, data cached to disk"
+    traces_to: [AC2]
+    constraints: [AR003]
+
+  - id: WU003
+    name: "Stock screening and multi-factor scoring engine"
+    assigned_to: strategy-engineer
+    workflow: main
+    depends_on: [WU002]
+    success_criteria: "Full market scan filters ST/delisted, scores by technical(40%)/fundamental(30%)/capital(20%)/sentiment(10%), outputs top-N candidates"
+    traces_to: [AC2]
+    constraints: [AR004]
+
+  - id: WU004
+    name: "Strategy engine: trend following, mean reversion, breakout"
+    assigned_to: strategy-engineer
+    workflow: main
+    depends_on: [WU002]
+    success_criteria: "Each strategy accepts custom params, generates buy/sell signals, supports backtest"
+    traces_to: [AC7]
+    constraints: [AR004]
+
+  - id: WU005
+    name: "Backtest engine with 7 key metrics"
+    assigned_to: backtest-engineer
+    workflow: main
+    depends_on: [WU003, WU004]
+    success_criteria: "Backtest outputs: win_rate, risk_reward_ratio, max_drawdown, risk_per_trade, annual_return, max_consecutive_losses, avg_r_multiple"
+    traces_to: [AC3]
+    constraints: [AR005]
+
+  - id: WU006
+    name: "Monte Carlo backtest and Deflated Sharpe Ratio test"
+    assigned_to: backtest-engineer
+    workflow: main
+    depends_on: [WU005]
+    success_criteria: "MC backtest outputs P10/P25/P50/P75/P90 distribution + loss_probability; DSR test penalizes multiple testing with Haircut Sharpe"
+    traces_to: [AC4, AC8]
+    constraints: [AR005]
+    requires_human_review: false
+
+  - id: WU007
+    name: "Risk management: position sizing, stop loss, circuit breaker"
+    assigned_to: risk-engineer
+    workflow: main
+    depends_on: [WU001]
+    success_criteria: "Position size ≤ 2% capital at risk, stop loss enforced, max drawdown 20% triggers breaker, daily loss 5% cooldown 3 days"
+    traces_to: [AC5]
+    constraints: [AR006, AR007]
+
+  - id: WU008
+    name: "Paper trading execution engine"
+    assigned_to: execution-engineer
+    workflow: main
+    depends_on: [WU007, WU003]
+    success_criteria: "Paper trading works by default, --live flag required for real trading, orders logged to audit"
+    traces_to: [AC1]
+    constraints: [AR007]
+
+  - id: WU009
+    name: "Sentiment analysis and market hotspot detection"
+    assigned_to: research-engineer
+    workflow: main
+    depends_on: [WU002]
+    success_criteria: "6-dimension sentiment scoring (涨跌家数/涨跌停/换手率/新高新低/融资融券/指数趋势), 5-level output, hotspot momentum labels"
+    traces_to: [AC2]
+    constraints: [AR004]
+
+  - id: WU010
+    name: "Fundamental research analysis engine"
+    assigned_to: research-engineer
+    workflow: main
+    depends_on: [WU002]
+    success_criteria: "News sentiment analysis, research report summary, announcement scanning, key findings + risk warnings"
+    traces_to: [AC2]
+    constraints: [AR004]
+
+  - id: WU011
+    name: "Portfolio optimization: Markowitz, Risk Parity, HRP"
+    assigned_to: strategy-engineer
+    workflow: main
+    depends_on: [WU002]
+    success_criteria: "Covariance estimation (Ledoit-Wolf/EWMA/sample), Markowitz optimization, Risk Parity, HRP, factor exposure analysis"
+    traces_to: [AC2]
+    constraints: [AR004]
+
+  - id: WU012
+    name: "Statistical arbitrage: cointegration pairs, PCA, HMM, Kalman filter"
+    assigned_to: strategy-engineer
+    workflow: main
+    depends_on: [WU002]
+    success_criteria: "Pair discovery via Johansen cointegration, PCA arbitrage, HMM regime detection, Kalman dynamic hedge ratio"
+    traces_to: [AC2]
+    constraints: [AR004]
+
+  - id: WU013
+    name: "CLI interface with Click + Rich terminal UI"
+    assigned_to: cli-engineer
+    workflow: main
+    depends_on: [WU001, WU002, WU003, WU004, WU005, WU007, WU008, WU009, WU010, WU011, WU012]
+    success_criteria: "All commands produce structured output (JSON/Markdown), Rich tables/progress bars, --help on every command"
+    traces_to: [AC6]
+    constraints: [AR008]
+
+  - id: WU014
+    name: "Integration tests: full daily pipeline end-to-end"
+    assigned_to: verifier
+    workflow: main
+    depends_on: [WU013]
+    success_criteria: "daily-run completes: scan → score → strategy fusion → risk → report; daily-trade completes: scan → score → fusion → risk → order"
+    traces_to: [AC2]
+    constraints: []
+
+  - id: WU015
+    name: "Risk management integration tests"
+    assigned_to: verifier
+    workflow: main
+    depends_on: [WU007, WU008]
+    success_criteria: "Verify position sizing, stop loss enforcement, drawdown circuit breaker, daily loss breaker, paper-only default"
+    traces_to: [AC1, AC5]
+    constraints: []
+
+  - id: WU016
+    name: "Backtest accuracy tests"
+    assigned_to: verifier
+    workflow: main
+    depends_on: [WU005, WU006]
+    success_criteria: "Verify 7 metrics accuracy, MC distribution correctness, DSR penalization logic"
+    traces_to: [AC3, AC4, AC8]
+    constraints: []

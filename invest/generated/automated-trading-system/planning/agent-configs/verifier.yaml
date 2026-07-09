@@ -1,0 +1,60 @@
+agent:
+  name: verifier
+  role: Write integration tests for all acceptance criteria; Run quality gate checks;
+    Verify all evidence meets acceptance criteria
+  capabilities:
+  - Write integration tests for all acceptance criteria
+  - Run quality gate checks
+  - Verify all evidence meets acceptance criteria
+  tools:
+  - name: src/trading_system/
+    access: read
+  - name: task.yaml
+    access: read
+  - name: memory/session-state.yaml
+    access: read
+  - name: tests/
+    access: write
+  - name: verification reports
+    access: write
+  scope:
+    can_read:
+    - src/trading_system/
+    - task.yaml
+    - memory/session-state.yaml
+    can_write:
+    - tests/
+    - verification reports
+    can_execute:
+    - python orchestrator.py --verify
+    - python guard.py --check
+  boundaries:
+    cannot:
+    - Modify production code
+    - Mark criteria verified without evidence
+    max_context_lines: 3000
+    requires_human_review: false
+  handoff:
+    input_format:
+    - src/trading_system/
+    - task.yaml
+    - memory/session-state.yaml
+    output_format:
+    - tests/
+    - verification reports
+  verification:
+    self_check: Run verification before marking complete
+    external_check: orchestrator.py --verify must pass
+  assigned_workflows:
+  - main
+  assigned_criteria:
+  - 'AC1: Paper trading mode is default; live trading requires explicit --live flag'
+  - 'AC2: Full daily pipeline runs end-to-end: scan → score → strategy fusion → risk
+    → report'
+  - 'AC3: Backtest engine produces 7 key metrics (win rate, R/R, max drawdown, risk%,
+    annual return, max consecutive losses, R-multiple)'
+  - 'AC4: Monte Carlo backtest outputs P10/P25/P50/P75/P90 equity distribution and
+    loss probability'
+  - 'AC5: Risk management enforces: position sizing, stop loss, max drawdown, circuit
+    breaker'
+  - 'AC8: Deflated Sharpe Ratio significance test correctly penalizes multiple testing'

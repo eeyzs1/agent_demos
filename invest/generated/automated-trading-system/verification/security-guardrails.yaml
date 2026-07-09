@@ -1,0 +1,63 @@
+version: 1
+description: Security guardrails — sensitive data filters and dangerous operation blockers for trading system
+
+sensitive_data_filters:
+  pii_patterns:
+    - name: broker_account
+      pattern: "(?i)(broker_account|account_id|fund_account)\\s*[:=]\\s*['\"]?[^'\"\\s]+"
+      action: block
+    - name: id_card
+      pattern: "\\b\\d{6}(19|20)\\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\\d|3[01])\\d{3}[0-9Xx]\\b"
+      action: block
+    - name: phone_cn
+      pattern: "\\b1[3-9]\\d{9}\\b"
+      action: mask
+
+  secret_patterns:
+    - name: broker_api_key
+      pattern: "(?i)(qmt_key|xtp_key|broker_api_key|trade_password)\\s*[:=]\\s*['\"]?[^'\"\\s]+"
+      action: block
+    - name: api_token
+      pattern: "(?i)(api_token|access_token|bearer)\\s*[:=]\\s*['\"]?[^'\"\\s]+"
+      action: block
+    - name: private_key
+      pattern: "-----BEGIN (RSA |EC |DSA )?PRIVATE KEY-----"
+      action: block
+    - name: password_field
+      pattern: "(?i)password\\s*[:=]\\s*['\"]?[^'\"\\s]+"
+      action: block
+
+dangerous_operations:
+  blocked_commands:
+    - pattern: "--live"
+      reason: "Live trading flag must be explicitly approved by human review"
+    - pattern: "rm\\s+-rf\\s+/"
+      reason: "Recursive force delete from root"
+    - pattern: "git\\s+push\\s+--force"
+      reason: "Force push can overwrite history"
+    - pattern: "chmod\\s+777"
+      reason: "Overly permissive file access"
+    - pattern: "curl.*\\|.*sh"
+      reason: "Piping remote content to shell"
+
+  blocked_file_operations:
+    - pattern: "writing to config/broker/"
+      reason: "Broker credentials must not be modified programmatically"
+    - pattern: "writing to ~/.ssh/"
+      reason: "SSH configuration modification"
+    - pattern: "writing to ~/.aws/"
+      reason: "AWS credentials modification"
+
+  trading_specific_guardrails:
+    - name: paper_trading_default
+      rule: "All CLI commands default to paper trading; --live flag requires explicit human approval"
+      enforce: block_without_approval
+    - name: risk_limit_enforcement
+      rule: "Position size must not exceed 2% of total capital per trade"
+      enforce: block
+    - name: drawdown_circuit_breaker
+      rule: "System must halt all trading if max drawdown exceeds 20% or daily loss exceeds 5%"
+      enforce: block_and_notify
+    - name: audit_log_mandatory
+      rule: "All order placement, risk checks, and config changes must be audit-logged"
+      enforce: block_without_log

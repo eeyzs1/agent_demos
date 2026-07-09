@@ -1,0 +1,106 @@
+# Default configuration for Automated Trading System
+# All values can be overridden by user config files in the config/ directory
+
+# Trading mode
+trading:
+  mode: paper            # 'paper' (default) or 'live' (requires --live flag)
+  initial_capital: 100000.0  # CNY
+
+# Risk management
+risk:
+  max_position_pct: 0.02      # Max 2% of capital per trade
+  max_drawdown_pct: 0.20      # 20% max drawdown triggers circuit breaker
+  daily_loss_pct: 0.05        # 5% daily loss triggers circuit breaker
+  cooldown_days: 3             # Circuit breaker cooldown period
+  stop_loss_pct: 0.05          # Default stop loss 5%
+  take_profit_pct: 0.15        # Default take profit 15%
+
+# Data source
+data:
+  source: akshare
+  cache_dir: data/cache
+  cache_ttl_hours: 24
+  request_timeout: 30         # seconds
+  max_retries: 3
+  retry_delay: 5              # seconds
+
+# Stock screening
+screening:
+  max_stocks: 5000
+  exclude_st: true
+  exclude_new_listings_days: 60
+  factor_weights:
+    technical: 0.40
+    fundamental: 0.30
+    capital: 0.20
+    sentiment: 0.10
+
+# Strategy
+strategy:
+  default_params:
+    trend_following:
+      ma_short: 20
+      ma_long: 60
+      volume_ratio: 1.5
+    mean_reversion:
+      bollinger_period: 20
+      bollinger_std: 2.0
+      rsi_period: 14
+      rsi_oversold: 30
+      rsi_overbought: 70
+    breakout:
+      lookback_days: 20
+      volume_threshold: 2.0
+
+# Backtest
+backtest:
+  default_start: "2020-01-01"
+  max_stocks: 100
+  max_days: 2520           # ~10 years
+  commission_rate: 0.0003  # 0.03%
+  slippage: 0.001          # 0.1%
+  benchmark: "000300"      # CSI 300
+
+# Monte Carlo
+monte_carlo:
+  simulations: 1000
+  confidence_levels: [0.10, 0.25, 0.50, 0.75, 0.90]
+
+# Deflated Sharpe Ratio
+deflated_sharpe:
+  num_trials: 100
+  variance_multiplier: 3.0
+
+# Output
+output:
+  format: json             # 'json' or 'markdown'
+  report_dir: output
+
+# Portfolio optimization
+portfolio:
+  covariance:
+    method: sample           # 'sample', 'ledoit_wolf', or 'ewma'
+    ewma_lambda: 0.94        # Decay factor for EWMA covariance
+  optimizer:
+    risk_free_rate: 0.02     # Annual risk-free rate (2%)
+    max_weight: 0.25         # Maximum weight per asset
+    min_weight: 0.0          # Minimum weight per asset
+  risk_parity:
+    method: equal_risk       # 'equal_risk' or 'inverse_volatility'
+
+# ML / Statistical Arbitrage
+ml:
+  arbitrage:
+    entry_zscore: 2.0        # Z-score threshold for entry
+    exit_zscore: 0.5         # Z-score threshold for exit
+    half_life_window: 252    # Max half-life window (trading days)
+    lookback_period: 252     # Default lookback for rolling calculations
+    pca_threshold: 2.0       # Z-score threshold for PCA mispricing
+    hmm_n_regimes: 3         # Number of HMM regimes (bull/bear/sideways)
+    kalman_delta: 1e-4       # Initial state covariance for Kalman filter
+    kalman_transition_cov: 1e-5  # Transition noise covariance for Kalman
+
+# CLI
+cli:
+  theme: dark
+  table_style: rounded

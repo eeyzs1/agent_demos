@@ -1,0 +1,52 @@
+version: 1
+description: Session replay configuration for trading system debugging and strategy reproduction
+
+replay:
+  enabled: true
+  storage:
+    type: file
+    path: "logs/replays/"
+    format: jsonl
+    rotation: daily
+    retention_days: 30
+
+  capture:
+    - category: conversation
+      fields: [role, content, timestamp]
+      reason: "Full conversation for context reconstruction"
+
+    - category: decisions
+      fields: [decision, rationale, alternatives, timestamp]
+      reason: "Decision trail for understanding why a trade was placed or rejected"
+
+    - category: tool_calls
+      fields: [tool, parameters, result, duration_ms, timestamp]
+      reason: "Tool usage for reproducing issues"
+
+    - category: market_data
+      fields: [stock_code, date, open, high, low, close, volume, timestamp]
+      reason: "Market data snapshot for reproducing strategy decisions"
+
+    - category: strategy_signals
+      fields: [strategy_name, stock_code, signal_type, score, factors, timestamp]
+      reason: "Strategy signal history for backtest reproduction"
+
+    - category: risk_decisions
+      fields: [check_type, input_state, decision, reason, timestamp]
+      reason: "Risk management decisions for audit and debugging"
+
+    - category: errors
+      fields: [error_type, message, stack_trace, context, timestamp]
+      reason: "Error context for debugging"
+
+    - category: verification_results
+      fields: [check_type, passed, details, timestamp]
+      reason: "Verification outcomes for quality analysis"
+
+  replay_mode:
+    allow_step_through: true
+    allow_fast_forward: true
+    allow_branching: false
+    max_replay_sessions: 5
+    strategy_replay: true
+    strategy_replay_note: "Replay mode supports re-running strategies against captured market data snapshots"

@@ -1,0 +1,103 @@
+version: 1
+description: Permission manifest per agent role — automated trading system
+
+roles:
+  core-engineer:
+    can_read:
+      - "src/**"
+      - "config/**"
+      - "tests/**"
+    can_write:
+      - "src/trading_system/core/**"
+      - "config/default.yaml"
+    can_execute:
+      - "python -m pytest tests/"
+      - "ruff check src/"
+      - "mypy src/"
+
+  data-engineer:
+    can_read:
+      - "src/**"
+      - "config/**"
+      - "data/**"
+    can_write:
+      - "src/trading_system/data/**"
+      - "data/**"
+    can_execute:
+      - "python -m pytest tests/"
+      - "python -c"
+
+  strategy-engineer:
+    can_read:
+      - "src/**"
+      - "config/**"
+      - "data/**"
+    can_write:
+      - "src/trading_system/strategy/**"
+    can_execute:
+      - "python -m pytest tests/"
+      - "python -c"
+
+  backtest-engineer:
+    can_read:
+      - "src/**"
+      - "config/**"
+      - "data/**"
+    can_write:
+      - "src/trading_system/backtest/**"
+    can_execute:
+      - "python -m pytest tests/"
+      - "python -c"
+
+  risk-engineer:
+    can_read:
+      - "src/**"
+      - "config/**"
+    can_write:
+      - "src/trading_system/risk/**"
+    can_execute:
+      - "python -m pytest tests/"
+      - "python -c"
+
+  execution-engineer:
+    can_read:
+      - "src/**"
+      - "config/**"
+    can_write:
+      - "src/trading_system/execution/**"
+    can_execute:
+      - "python -m pytest tests/"
+      - "python -c"
+
+  analysis-engineer:
+    can_read:
+      - "src/**"
+      - "config/**"
+      - "output/**"
+      - "data/**"
+    can_write:
+      - "src/trading_system/analysis/**"
+      - "output/**"
+    can_execute:
+      - "python -m pytest tests/"
+      - "python -c"
+
+  cli-engineer:
+    can_read:
+      - "src/**"
+      - "config/**"
+    can_write:
+      - "src/trading_system/cli/**"
+    can_execute:
+      - "python -m pytest tests/"
+      - "python -m trading_system.cli"
+
+  security-reviewer:
+    can_read:
+      - "src/**"
+      - "config/**"
+      - "security/**"
+    can_write: []
+    can_execute:
+      - "ruff check src/"
+      - "python -m pytest tests/"

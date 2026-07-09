@@ -1,0 +1,197 @@
+version: 2
+description: "Automated trading system agent topology — 9 role prototypes for full pipeline"
+
+prototypes:
+  core-engineer:
+    responsibilities:
+      - "Build core infrastructure: event bus, configuration management, audit logging"
+      - "Ensure all components communicate through the event bus"
+    receives:
+      - "task.yaml"
+      - "constraints/architecture-rules.yaml"
+    produces:
+      - "src/trading_system/core/"
+      - "config/default.yaml"
+    count: 1
+    condition: "S>=1"
+    boundaries:
+      cannot:
+        - "Implement trading logic"
+        - "Access market data APIs"
+      max_context_lines: 2000
+    requires_human_review: false
+
+  data-engineer:
+    responsibilities:
+      - "Implement market data fetching (daily/intraday) via akshare"
+      - "Data caching and watchlist management"
+      - "Handle data source failures gracefully"
+    receives:
+      - "src/trading_system/core/"
+      - "task.yaml"
+    produces:
+      - "src/trading_system/data/"
+    count: 1
+    condition: "S>=2"
+    boundaries:
+      cannot:
+        - "Make trading decisions"
+        - "Modify risk parameters"
+      max_context_lines: 2000
+    requires_human_review: false
+
+  strategy-engineer:
+    responsibilities:
+      - "Implement strategy engine: trend following, mean reversion, breakout"
+      - "Multi-factor scoring and pipeline"
+      - "Portfolio optimization: Markowitz, Risk Parity, HRP"
+      - "Statistical arbitrage: cointegration, PCA, HMM, Kalman filter"
+    receives:
+      - "src/trading_system/data/"
+      - "src/trading_system/core/"
+      - "constraints/architecture-rules.yaml"
+    produces:
+      - "src/trading_system/strategy/"
+      - "src/trading_system/pipeline/"
+      - "src/trading_system/portfolio/"
+      - "src/trading_system/ml/"
+    count: 2
+    condition: "S>=3"
+    boundaries:
+      cannot:
+        - "Execute real trades"
+        - "Bypass risk management"
+      max_context_lines: 3000
+    requires_human_review: false
+
+  backtest-engineer:
+    responsibilities:
+      - "Implement backtest engine with 7 key metrics"
+      - "Monte Carlo simulation with probability distribution"
+      - "Deflated Sharpe Ratio significance test"
+      - "Ensure statistical rigor"
+    receives:
+      - "src/trading_system/strategy/"
+      - "src/trading_system/data/"
+      - "constraints/architecture-rules.yaml"
+    produces:
+      - "src/trading_system/backtest/"
+    count: 1
+    condition: "S>=3"
+    boundaries:
+      cannot:
+        - "Modify strategy logic"
+        - "Access live trading"
+      max_context_lines: 2500
+    requires_human_review: false
+
+  risk-engineer:
+    responsibilities:
+      - "Implement position sizing (2% rule)"
+      - "Stop loss enforcement"
+      - "Max drawdown circuit breaker (20%)"
+      - "Daily loss breaker (5% / 3-day cooldown)"
+      - "Audit logging enforcement"
+    receives:
+      - "src/trading_system/core/"
+      - "task.yaml"
+      - "constraints/architecture-rules.yaml"
+    produces:
+      - "src/trading_system/risk/"
+    count: 1
+    condition: "C>=3"
+    boundaries:
+      cannot:
+        - "Relax risk limits without approval"
+        - "Disable circuit breakers"
+      max_context_lines: 2000
+    requires_human_review: true
+
+  execution-engineer:
+    responsibilities:
+      - "Implement paper trading execution engine"
+      - "--live flag gating for real trading"
+      - "Market impact cost estimation"
+      - "TWAP/VWAP/IS execution plans"
+      - "TCA reporting"
+    receives:
+      - "src/trading_system/risk/"
+      - "src/trading_system/pipeline/"
+      - "task.yaml"
+    produces:
+      - "src/trading_system/execution/"
+    count: 1
+    condition: "C>=3"
+    boundaries:
+      cannot:
+        - "Execute live trades without --live flag"
+        - "Skip risk checks"
+      max_context_lines: 2000
+    requires_human_review: true
+
+  research-engineer:
+    responsibilities:
+      - "6-dimension sentiment scoring and 5-level output"
+      - "Market hotspot detection with momentum labels"
+      - "Fundamental research: news, reports, announcements"
+      - "Key findings and risk warnings"
+    receives:
+      - "src/trading_system/data/"
+      - "src/trading_system/core/"
+    produces:
+      - "src/trading_system/sentiment/"
+      - "src/trading_system/research/"
+    count: 1
+    condition: "S>=3"
+    boundaries:
+      cannot:
+        - "Make trading decisions"
+        - "Access execution engine"
+      max_context_lines: 2500
+    requires_human_review: false
+
+  cli-engineer:
+    responsibilities:
+      - "Build CLI with Click framework + Rich terminal UI"
+      - "All commands output structured JSON or Markdown"
+      - "Implement --help on every command group"
+    receives:
+      - "src/trading_system/core/"
+      - "src/trading_system/data/"
+      - "src/trading_system/strategy/"
+      - "src/trading_system/backtest/"
+      - "src/trading_system/risk/"
+      - "src/trading_system/execution/"
+      - "src/trading_system/sentiment/"
+      - "src/trading_system/research/"
+    produces:
+      - "src/trading_system/cli/"
+    count: 1
+    condition: "S>=3"
+    boundaries:
+      cannot:
+        - "Implement business logic in CLI layer"
+        - "Access data sources directly"
+      max_context_lines: 3000
+    requires_human_review: false
+
+  verifier:
+    responsibilities:
+      - "Write integration tests for all acceptance criteria"
+      - "Run quality gate checks"
+      - "Verify all evidence meets acceptance criteria"
+    receives:
+      - "src/trading_system/"
+      - "task.yaml"
+      - "memory/session-state.yaml"
+    produces:
+      - "tests/"
+      - "verification reports"
+    count: 1
+    condition: "true"
+    boundaries:
+      cannot:
+        - "Modify production code"
+        - "Mark criteria verified without evidence"
+      max_context_lines: 3000
+    requires_human_review: false

@@ -1,0 +1,80 @@
+rules:
+  - id: AR001
+    description: "All inter-module communication goes through EventBus, not direct imports"
+    pattern: "from src.trading_system"
+    file_pattern: "src/trading_system/**/*.py"
+    severity: error
+
+  - id: AR002
+    description: "Core layer must not import from data/strategy/risk/execution/backtest/sentiment/research"
+    pattern: "from src.trading_system.(data|strategy|risk|execution|backtest|sentiment|research)"
+    file_pattern: "src/trading_system/core/**/*.py"
+    severity: error
+
+  - id: AR003
+    description: "Data layer only depends on core and external data sources (akshare)"
+    pattern: "from src.trading_system.(strategy|risk|execution|backtest)"
+    file_pattern: "src/trading_system/data/**/*.py"
+    severity: error
+
+  - id: AR004
+    description: "Strategy layer depends on data and core, must not import risk or execution"
+    pattern: "from src.trading_system.(risk|execution)"
+    file_pattern: "src/trading_system/(strategy|pipeline|portfolio|ml)/**/*.py"
+    severity: error
+
+  - id: AR005
+    description: "Backtest layer depends on strategy and data, must not import risk or execution"
+    pattern: "from src.trading_system.(risk|execution)"
+    file_pattern: "src/trading_system/backtest/**/*.py"
+    severity: error
+
+  - id: AR006
+    description: "Risk layer depends on core, must not import strategy or execution"
+    pattern: "from src.trading_system.(strategy|execution)"
+    file_pattern: "src/trading_system/risk/**/*.py"
+    severity: error
+
+  - id: AR007
+    description: "Execution layer depends on risk and pipeline, must enforce paper-only default with --live gate"
+    pattern: "mode.*=.*live"
+    file_pattern: "src/trading_system/execution/**/*.py"
+    severity: error
+    check: "default must be 'paper' not 'live'"
+
+  - id: AR008
+    description: "CLI layer is presentation only, must not contain business logic"
+    pattern: "(def calculate|def compute|def analyze|def predict)"
+    file_pattern: "src/trading_system/cli/**/*.py"
+    severity: warning
+
+  - id: AR009
+    description: "All configuration must be in YAML files, no hardcoded values"
+    pattern: "(= (?!.*config|.*get_config|.*from_config).*['\"](akshare|localhost|127\\.0\\.0\\.1|api_key))"
+    file_pattern: "src/trading_system/**/*.py"
+    severity: warning
+
+  - id: AR010
+    description: "No mock/fake/stub in production code"
+    pattern: "(Mock|Fake|Stub|Dummy|placeholder|simulated)"
+    file_pattern: "src/trading_system/**/*.py"
+    severity: error
+    exclude: "tests/**"
+
+dependency_direction:
+  allowed:
+    - "core → data"
+    - "core → risk"
+    - "data → strategy"
+    - "data → sentiment"
+    - "data → research"
+    - "strategy → backtest"
+    - "pipeline → risk"
+    - "risk → execution"
+    - "all → cli"
+  forbidden:
+    - "execution → strategy"
+    - "risk → strategy"
+    - "backtest → risk"
+    - "strategy → risk"
+    - "cli → data"
