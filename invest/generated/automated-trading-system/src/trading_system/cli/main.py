@@ -132,10 +132,13 @@ def _progress_bar() -> Progress:
               default=FMT_TABLE, help="Output format")
 @click.pass_context
 def cli(ctx, config_dir, output):
-    """Automated Trading System — CLI for screening, strategy, backtest, execution.
+    """A-share quant CLI — screening, recommend (LLM), backtest. Advice only for now.
 
     All commands produce structured output. Use --output to choose format.
     """
+    from ..core.env_loader import load_project_env
+
+    load_project_env()
     ctx.ensure_object(dict)
     ctx.obj["config_dir"] = config_dir
     ctx.obj["output"] = output
@@ -692,95 +695,176 @@ def arb_regime(ctx, symbol, start):
 
 
 # ======================================================================
+# Recommend Commands (P0 — advice only)
+# ======================================================================
+
+@cli.group()
+def recommend():
+    """Daily stock recommendations: mainboard score + news → LLM analysis."""
+
+
+@recommend.command("prepare")
+@click.option("--top", "-n", default=None, type=int, help="Candidates for agent judge")
+@click.option("--as-of", default=None, help="Report date YYYY-MM-DD")
+@click.option("--max-score", default=None, type=int, help="Cap scoring universe size")
+@click.pass_context
+def recommend_prepare(ctx, top, as_of, max_score):
+    """Score + news only; write agent_brief.json for Cursor agent final judgment."""
+    import subprocess
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[3]
+    script = root / "scripts" / "prepare_agent_brief.py"
+    cmd = [sys.executable, str(script), "--config-dir", ctx.obj["config_dir"]]
+    if top is not None:
+        cmd.extend(["--top", str(top)])
+    if as_of:
+        cmd.extend(["--as-of", as_of])
+    if max_score is not None:
+        cmd.extend(["--max-score", str(max_score)])
+    console.print("[cyan]Preparing agent brief (no external LLM)...[/cyan]")
+    raise SystemExit(subprocess.call(cmd, cwd=str(root)))
+
+
+@recommend.command("finalize")
+@click.option("--as-of", default=None, help="Report date YYYY-MM-DD")
+@click.option("--top", "-n", default=None, type=int)
+@click.pass_context
+def recommend_finalize(ctx, as_of, top):
+    """Build report from agent_judgments.json written by Cursor agent."""
+    import subprocess
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[3]
+    script = root / "scripts" / "finalize_from_judgments.py"
+    cmd = [sys.executable, str(script), "--config-dir", ctx.obj["config_dir"]]
+    if as_of:
+        cmd.extend(["--as-of", as_of])
+    if top is not None:
+        cmd.extend(["--top", str(top)])
+    raise SystemExit(subprocess.call(cmd, cwd=str(root)))
+
+
+@recommend.command("daily")
+@click.option("--top", "-n", default=None, type=int, help="Top N recommendations (default from config)")
+@click.option("--universe", default=None, help="Universe: mainboard | custom")
+@click.option("--as-of", default=None, help="Report date YYYY-MM-DD")
+@click.pass_context
+def recommend_daily(ctx, top, universe, as_of):
+    """Run daily recommend pipeline and write Markdown/JSON reports."""
+    from ..recommend.pipeline import DailyRecommendPipeline
+    from ..core.env_loader import get_llm_settings
+
+    settings = get_llm_settings()
+    if settings.available:
+        console.print(f"[green]LLM ready[/green]: model={settings.model} base={settings.api_base}")
+    else:
+        console.print("[yellow]LLM not configured — using rule fallback. Copy .env.example → .env[/yellow]")
+
+    console.print(Panel.fit("[bold blue]每日荐股报告[/bold blue]", border_style="blue"))
+    pipe = DailyRecommendPipeline(ctx.obj["config_dir"])
+    with console.status("Running: universe → score → news+LLM → report..."):
+        report, md_path, json_path = pipe.run(top_n=top, as_of=as_of, universe=universe)
+
+    table = Table(title=f"Top {len(report.recommendations)} · {report.as_of}", box=box.ROUNDED)
+    table.add_column("Rank", style="dim")
+    table.add_column("Code")
+    table.add_column("Name")
+    table.add_column("Score")
+    table.add_column("置信度")
+    table.add_column("建议")
+    table.add_column("一句话理由")
+    for r in report.recommendations:
+        reason0 = r.reasons[0].text if r.reasons else ""
+        table.add_row(
+            str(r.rank), r.symbol, r.name,
+            f"{r.scores.get('total', 0):.1f}",
+            f"{r.confidence:.0f}",
+            r.action_hint,
+            reason0[:28],
+        )
+    console.print(table)
+    console.print(f"[green]Markdown:[/green] {md_path}")
+    console.print(f"[green]JSON:[/green]     {json_path}")
+    _fmt_output(
+        {
+            "as_of": report.as_of,
+            "llm_enabled": report.llm_enabled,
+            "top": [r.to_dict() for r in report.recommendations],
+        },
+        ctx.obj["output"],
+        "Daily Recommend",
+    )
+
+
+@recommend.command("show")
+@click.option("--date", required=True, help="Report date YYYY-MM-DD")
+@click.pass_context
+def recommend_show(ctx, date):
+    """Print a previously generated report from disk."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[3]
+    md = root / "output" / "reports" / f"{date}_daily_recommend.md"
+    if not md.exists():
+        console.print(f"[red]Report not found:[/red] {md}")
+        raise SystemExit(1)
+    console.print(md.read_text(encoding="utf-8"))
+
+
+@recommend.command("explain")
+@click.option("--symbol", required=True, help="Stock code e.g. 600519")
+@click.pass_context
+def recommend_explain(ctx, symbol):
+    """Score one symbol and run news+LLM/rule explanation."""
+    from datetime import datetime as _dt
+    from ..pipeline.screener import StockScreener
+    from ..data.fetcher import MarketDataFetcher
+    from ..recommend.reasons import ReasonEngine
+
+    fetcher = MarketDataFetcher(ctx.obj["config_dir"])
+    screener = StockScreener(ctx.obj["config_dir"])
+    engine = ReasonEngine(ctx.obj["config_dir"])
+    code = str(symbol).zfill(6)
+    daily = fetcher.get_daily_data(code)
+    scores = screener.score_stock(code, daily)
+    name = code
+    try:
+        sl = fetcher.get_stock_list()
+        hit = sl[sl["code"].astype(str).str.zfill(6) == code]
+        if not hit.empty:
+            name = str(hit.iloc[0].get("name", code))
+    except Exception:
+        pass
+    row = {"code": code, "name": name, **scores}
+    as_of = _dt.now().strftime("%Y-%m-%d")
+    result = engine.analyze_row(row, as_of=as_of)
+    out = {
+        "symbol": code,
+        "name": name,
+        "scores": scores,
+        "action_hint": result.get("action_hint"),
+        "confidence": result.get("confidence"),
+        "reasons": [r.to_dict() if hasattr(r, "to_dict") else r for r in result.get("reasons", [])],
+        "risks": [r.to_dict() if hasattr(r, "to_dict") else r for r in result.get("risks", [])],
+        "news_summary": result.get("news_summary"),
+        "llm_status": result.get("llm_status"),
+    }
+    _fmt_output(out, ctx.obj["output"], f"Explain {code}")
+
+
+# ======================================================================
 # Pipeline Commands
 # ======================================================================
 
 @cli.command("daily-run")
 @click.option("--top", "-n", default=20, help="Top N candidates")
-@click.option("--start", default="20240101", help="Start date")
+@click.option("--start", default="20240101", help="Start date (ignored; kept for compat)")
 @click.pass_context
 def daily_run(ctx, top, start):
-    """Run complete daily pipeline: scan → score → strategy → risk → report."""
-    from ..pipeline.screener import StockScreener
-    from ..strategy.strategies import StrategyEngine
-    from ..risk.manager import RiskManager
-    from ..sentiment.analyzer import SentimentAnalyzer
-    from ..data.fetcher import MarketDataFetcher
-
-    cfg = get_config(ctx.obj["config_dir"])
-    fetcher = MarketDataFetcher(ctx.obj["config_dir"])
-    screener = StockScreener(ctx.obj["config_dir"])
-    engine = StrategyEngine(ctx.obj["config_dir"])
-    risk_mgr = RiskManager(ctx.obj["config_dir"])
-    sentiment = SentimentAnalyzer(ctx.obj["config_dir"])
-
-    console.print(Panel.fit("[bold blue]Daily Pipeline Run[/bold blue]", border_style="blue"))
-    start_time = datetime.now()
-
-    with _progress_bar() as progress:
-        # Step 1: Market sentiment
-        task = progress.add_task("Market sentiment...", total=6)
-        sent = sentiment.analyze()
-        progress.update(task, advance=1)
-
-        # Step 2: Stock list
-        progress.update(task, description="Fetching stock list...")
-        stock_list = fetcher.get_stock_list()
-        progress.update(task, advance=1)
-
-        # Step 3: Screen
-        progress.update(task, description="Screening stocks...")
-        candidates = screener.screen(stock_list, start, None)
-        if candidates is None or candidates.empty:
-            console.print("[red]Screening returned no candidates[/red]")
-            return
-        top_candidates = screener.get_top_candidates(candidates, top)
-        progress.update(task, advance=1)
-
-        # Step 4: Strategy signals
-        progress.update(task, description="Generating signals...")
-        stock_data = {}
-        for _, row in top_candidates.iterrows():
-            code = row["code"]
-            df = fetcher.get_daily_data(code, start)
-            if df is not None and not df.empty:
-                stock_data[code] = df
-        signals = engine.generate_signals(stock_data)
-        progress.update(task, advance=1)
-
-        # Step 5: Risk assessment
-        progress.update(task, description="Risk assessment...")
-        risk_state = risk_mgr.get_state()
-        progress.update(task, advance=1)
-
-        # Step 6: Report
-        progress.update(task, description="Generating report...")
-        progress.update(task, advance=1)
-
-    elapsed = (datetime.now() - start_time).total_seconds()
-
-    # Print report
-    console.print()
-    console.print(Panel.fit("[bold green]Daily Report[/bold green]", border_style="green"))
-
-    # Sentiment summary
-    console.print(f"\n[bold]Market Sentiment:[/bold] {sent.get('level', 'N/A')} "
-                  f"(score: {sent.get('score', 0)}, momentum: {sent.get('momentum', 'N/A')})")
-
-    # Top candidates
-    console.print(f"\n[bold]Top {top} Candidates:[/bold]")
-    if not top_candidates.empty:
-        display_cols = [c for c in ["code", "name", "total", "technical", "fundamental"] if c in top_candidates.columns]
-        _print_df_table(top_candidates[display_cols].head(10), "Top Candidates")
-
-    # Risk status
-    circuit = risk_state.get("circuit_breaker_active", False)
-    if circuit:
-        console.print(f"\n[bold red]⚠ Circuit Breaker Active:[/bold red] {risk_state.get('circuit_breaker_reason', 'Unknown')}")
-    else:
-        console.print(f"\n[bold green]Risk Status:[/bold green] Normal")
-
-    console.print(f"\n[dim]Pipeline completed in {elapsed:.1f}s[/dim]")
+    """Deprecated: use `recommend daily` instead."""
+    console.print("[yellow]daily-run is deprecated — redirecting to `recommend daily`[/yellow]")
+    ctx.invoke(recommend_daily, top=top, universe=None, as_of=None)
 
 
 @cli.command("daily-trade")
@@ -788,62 +872,12 @@ def daily_run(ctx, top, start):
 @click.option("--start", default="20240101", help="Start date")
 @click.pass_context
 def daily_trade(ctx, top, start):
-    """Run complete daily trading pipeline: scan → score → fusion → risk → order."""
-    from ..pipeline.screener import StockScreener
-    from ..strategy.strategies import StrategyEngine
-    from ..risk.manager import RiskManager
-    from ..execution.executor import PaperExecutor
-    from ..data.fetcher import MarketDataFetcher
-
-    cfg = get_config(ctx.obj["config_dir"])
-    fetcher = MarketDataFetcher(ctx.obj["config_dir"])
-    screener = StockScreener(ctx.obj["config_dir"])
-    engine = StrategyEngine(ctx.obj["config_dir"])
-    risk_mgr = RiskManager(ctx.obj["config_dir"])
-    executor = PaperExecutor(ctx.obj["config_dir"])
-
-    console.print(Panel.fit("[bold yellow]Daily Trading Pipeline[/bold yellow]", border_style="yellow"))
-
-    with _progress_bar() as progress:
-        task = progress.add_task("Running pipeline...", total=5)
-        stock_list = fetcher.get_stock_list()
-        progress.update(task, advance=1)
-
-        candidates = screener.screen(stock_list, start, None)
-        if candidates is None or candidates.empty:
-            console.print("[red]No candidates[/red]")
-            return
-        top_candidates = screener.get_top_candidates(candidates, top)
-        progress.update(task, advance=1)
-
-        stock_data = {}
-        for _, row in top_candidates.iterrows():
-            code = row["code"]
-            df = fetcher.get_daily_data(code, start)
-            if df is not None and not df.empty:
-                stock_data[code] = df
-        signals = engine.generate_signals(stock_data)
-        progress.update(task, advance=1)
-
-        orders = []
-        if not signals.empty:
-            latest = signals.groupby("symbol").last().reset_index()
-            for _, row in latest.iterrows():
-                sym = row["symbol"]
-                cs = row.get("combined_score", 0)
-                if cs > 0.3:
-                    ok, reason = risk_mgr.can_open_position(sym, 10.0, 100, "long")
-                    if ok:
-                        order = executor.submit_order(sym, "buy", 100)
-                        orders.append(order)
-                    else:
-                        orders.append({"symbol": sym, "status": "rejected", "reason": reason})
-        progress.update(task, advance=1, description="Generating report...")
-        progress.update(task, advance=1)
-
-    console.print(f"\n[bold]Orders:[/bold] {len(orders)} submitted")
-    if orders:
-        _fmt_output(orders, ctx.obj["output"], "Trade Orders")
+    """Trading pipeline deferred — use `recommend daily` for advice only."""
+    console.print(
+        "[yellow]交易能力已后置。本期请使用:[/yellow] "
+        "[bold]python -m trading_system.cli.main recommend daily[/bold]"
+    )
+    raise SystemExit(2)
 
 
 # ======================================================================

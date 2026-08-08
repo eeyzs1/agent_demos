@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trading-system"
+version = "0.2.0"
+description = "A-share quant screening + daily LLM recommendation reports"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "akshare>=1.14.0",
+  "pandas>=2.0.0",
+  "numpy>=1.24.0",
+  "click>=8.1.0",
+  "rich>=13.0.0",
+  "pyyaml>=6.0",
+  "pyarrow>=14.0.0",
+  "python-dotenv>=1.0.0",
+  "httpx>=0.27.0",
+  "tabulate>=0.9.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0"]
+
+[project.scripts]
+trading-system = "trading_system.cli.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

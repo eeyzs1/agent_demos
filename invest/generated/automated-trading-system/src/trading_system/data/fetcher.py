@@ -149,20 +149,24 @@ class MarketDataFetcher:
         if cached is not None:
             return cached
 
-        def _fetch():
-            import akshare as ak
-            df = ak.stock_zh_a_hist(
-                symbol=symbol,
-                period="daily",
-                start_date=start_date,
-                end_date=end_date,
-                adjust=adjust,
-            )
-            if df is not None and not df.empty:
-                df.columns = [c.lower() for c in df.columns]
-            return df
+        df = pd.DataFrame()
+        # Prefer Sina K-line — East Money / akshare often blocked
+        try:
+            df = self._fetch_daily_sina_http(symbol, start_date, end_date)
+        except Exception as e:
+            logger.warning("Sina daily fetch failed for %s: %s", symbol, e)
 
-        df = self._retry_fetch(_fetch)
+        if df is None or df.empty:
+            try:
+                df = self._fetch_daily_eastmoney_http(symbol, start_date, end_date, adjust)
+            except Exception as e:
+                logger.warning("HTTP daily fetch failed for %s: %s", symbol, e)
+
+        if df is None or df.empty:
+            # Skip slow akshare hist when primary sources fail (often blocked)
+            logger.warning("No daily data for %s from Sina/EM", symbol)
+            df = pd.DataFrame()
+
         if df is not None and not df.empty:
             self._write_cache(cache_key, df)
             self._event_bus.publish(
@@ -170,6 +174,125 @@ class MarketDataFetcher:
                 {"symbol": symbol, "rows": len(df), "start": start_date, "end": end_date},
             )
         return df if df is not None else pd.DataFrame()
+
+    def _secid(self, symbol: str) -> str:
+        s = str(symbol).zfill(6)
+        return f"1.{s}" if s.startswith(("5", "6", "9")) else f"0.{s}"
+
+    def _fetch_daily_sina_http(
+        self,
+        symbol: str,
+        start_date: str,
+        end_date: str,
+    ) -> pd.DataFrame:
+        """Sina CN_MarketData.getKLineData daily bars."""
+        import requests
+
+        s = str(symbol).zfill(6)
+        sina_symbol = f"sh{s}" if s.startswith(("5", "6", "9")) else f"sz{s}"
+        # Request enough bars then filter by date
+        url = "https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData"
+        resp = requests.get(
+            url,
+            params={"symbol": sina_symbol, "scale": 240, "ma": "no", "datalen": 250},
+            timeout=self.request_timeout,
+            headers={
+                "User-Agent": "Mozilla/5.0",
+                "Referer": "https://finance.sina.com.cn",
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if not isinstance(data, list) or not data:
+            return pd.DataFrame()
+
+        rows = []
+        start = f"{start_date[:4]}-{start_date[4:6]}-{start_date[6:8]}"
+        end = f"{end_date[:4]}-{end_date[4:6]}-{end_date[6:8]}"
+        prev_close = None
+        for item in data:
+            day = str(item.get("day", ""))
+            if day < start or day > end:
+                continue
+            close = float(item["close"])
+            open_ = float(item["open"])
+            high = float(item["high"])
+            low = float(item["low"])
+            vol = float(item.get("volume") or 0)
+            chg = 0.0
+            if prev_close and prev_close > 0:
+                chg = (close / prev_close - 1.0) * 100.0
+            rows.append(
+                {
+                    "date": day,
+                    "open": open_,
+                    "close": close,
+                    "high": high,
+                    "low": low,
+                    "volume": vol,
+                    "amount": vol * close,
+                    "amplitude": ((high - low) / prev_close * 100.0) if prev_close else 0.0,
+                    "change_pct": chg,
+                    "change_amount": (close - prev_close) if prev_close else 0.0,
+                    "turnover_rate": 0.0,
+                }
+            )
+            prev_close = close
+        return pd.DataFrame(rows)
+
+    def _fetch_daily_eastmoney_http(
+        self,
+        symbol: str,
+        start_date: str,
+        end_date: str,
+        adjust: str = "qfq",
+    ) -> pd.DataFrame:
+        """East Money push2his kline API → OHLCV DataFrame."""
+        import requests
+
+        fqt = 1 if adjust == "qfq" else (2 if adjust == "hfq" else 0)
+        url = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
+        params = {
+            "secid": self._secid(symbol),
+            "fields1": "f1,f2,f3,f4,f5,f6",
+            "fields2": "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61",
+            "klt": "101",
+            "fqt": fqt,
+            "beg": start_date,
+            "end": end_date,
+            "lmt": "1000000",
+        }
+        resp = requests.get(
+            url,
+            params=params,
+            timeout=self.request_timeout,
+            headers={"User-Agent": "Mozilla/5.0", "Referer": "https://quote.eastmoney.com/"},
+        )
+        resp.raise_for_status()
+        klines = ((resp.json() or {}).get("data") or {}).get("klines") or []
+        if not klines:
+            return pd.DataFrame()
+        rows = []
+        for line in klines:
+            parts = str(line).split(",")
+            if len(parts) < 11:
+                continue
+            rows.append(
+                {
+                    "date": parts[0],
+                    "open": float(parts[1]),
+                    "close": float(parts[2]),
+                    "high": float(parts[3]),
+                    "low": float(parts[4]),
+                    "volume": float(parts[5]),
+                    "amount": float(parts[6]),
+                    "amplitude": float(parts[7]) if parts[7] not in ("", "-") else 0.0,
+                    "change_pct": float(parts[8]) if parts[8] not in ("", "-") else 0.0,
+                    "change_amount": float(parts[9]) if parts[9] not in ("", "-") else 0.0,
+                    "turnover_rate": float(parts[10]) if parts[10] not in ("", "-") else 0.0,
+                }
+            )
+        return pd.DataFrame(rows)
 
     def get_intraday_data(
         self,
@@ -318,6 +441,129 @@ class MarketDataFetcher:
 
         return result
 
+    def get_stock_news(self, symbol: str, limit: int = 8) -> List[Dict[str, Any]]:
+        """Fetch recent news headlines for a stock.
+
+        Tries akshare first, then a direct East Money HTTP fallback.
+        Returns list of dicts: title, content, datetime, source.
+        """
+        symbol = str(symbol).strip().zfill(6)
+        cache_key = self._cache_key("news", symbol, limit)
+        cached = self._read_cache(cache_key)
+        if cached is not None and not cached.empty:
+            return cached.to_dict("records")
+
+        df = pd.DataFrame()
+        # Prefer F10 HTTP first — akshare stock_news_em currently breaks on some runtimes.
+        try:
+            df = self._fetch_news_eastmoney_http(symbol)
+        except Exception as e:
+            logger.warning("HTTP news fetch failed for %s: %s", symbol, e)
+
+        if df is None or df.empty:
+            try:
+                df = self._retry_fetch(lambda: self._fetch_news_akshare(symbol))
+            except Exception as e:
+                logger.warning("akshare news failed for %s: %s", symbol, e)
+
+        if df is None or df.empty:
+            return []
+
+        keep = [c for c in ("title", "content", "datetime", "source") if c in df.columns]
+        if not keep:
+            out = []
+            for _, row in df.head(limit).iterrows():
+                out.append({"title": str(row.iloc[0]), "content": "", "datetime": "", "source": ""})
+            return out
+
+        slim = df[keep].head(limit).copy()
+        for c in ("title", "content", "datetime", "source"):
+            if c not in slim.columns:
+                slim[c] = ""
+        # stringify for parquet
+        for c in slim.columns:
+            slim[c] = slim[c].astype(str)
+        self._write_cache(cache_key, slim)
+        return slim.to_dict("records")
+
+    def _normalize_news_frame(self, df: pd.DataFrame) -> pd.DataFrame:
+        if df is None or df.empty:
+            return pd.DataFrame()
+        rename = {}
+        for c in df.columns:
+            cs = str(c)
+            cl = cs.lower()
+            if "标题" in cs or cl in {"title", "新闻标题"}:
+                rename[c] = "title"
+            elif "内容" in cs or "摘要" in cs or cl in {"content", "新闻内容", "digest"}:
+                rename[c] = "content"
+            elif "时间" in cs or "date" in cl or "datetime" in cl or cl == "showtime":
+                rename[c] = "datetime"
+            elif "来源" in cs or "source" in cl or "media" in cl:
+                rename[c] = "source"
+        return df.rename(columns=rename)
+
+    def _fetch_news_akshare(self, symbol: str) -> pd.DataFrame:
+        import akshare as ak
+        df = ak.stock_news_em(symbol=symbol)
+        return self._normalize_news_frame(df if df is not None else pd.DataFrame())
+
+    def _fetch_news_eastmoney_http(self, symbol: str) -> pd.DataFrame:
+        """East Money F10 news/bulletin API (more stable than search JSONP)."""
+        import requests
+
+        symbol = str(symbol).zfill(6)
+        if symbol.startswith(("5", "6", "9")):
+            em_code = f"SH{symbol}"
+        else:
+            em_code = f"SZ{symbol}"
+
+        url = "https://emweb.securities.eastmoney.com/PC_HSF10/NewsBulletin/PageAjax"
+        resp = requests.get(
+            url,
+            params={"code": em_code},
+            timeout=self.request_timeout,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+        rows = []
+
+        # Company news
+        gszx = (payload.get("gszx") or {}).get("data") or {}
+        for a in gszx.get("items") or []:
+            ts = a.get("showDateTime") or a.get("updateTime") or 0
+            dt = ""
+            try:
+                if ts and int(ts) > 10_000_000_000:  # ms
+                    dt = datetime.fromtimestamp(int(ts) / 1000).strftime("%Y-%m-%d %H:%M:%S")
+                elif ts and int(ts) > 1_000_000_000:
+                    dt = datetime.fromtimestamp(int(ts)).strftime("%Y-%m-%d %H:%M:%S")
+            except Exception:
+                dt = str(ts or "")
+            rows.append(
+                {
+                    "title": a.get("title") or "",
+                    "content": a.get("summary") or a.get("content") or a.get("digest") or "",
+                    "datetime": dt,
+                    "source": a.get("source") or a.get("media_name") or "eastmoney",
+                }
+            )
+
+        # Announcements (also informative for message score)
+        for a in payload.get("gsgg") or []:
+            if not isinstance(a, dict):
+                continue
+            rows.append(
+                {
+                    "title": a.get("title") or "",
+                    "content": a.get("content") or "",
+                    "datetime": str(a.get("display_time") or a.get("notice_date") or ""),
+                    "source": "announcement",
+                }
+            )
+
+        return pd.DataFrame(rows) if rows else pd.DataFrame()
     def clear_cache(self, older_than_hours: int = None) -> int:
         """Clear cached data files.
 

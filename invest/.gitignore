@@ -7,6 +7,9 @@ env/
 node_modules/
 .env
 *.egg-info/
+generated/automated-trading-system/data/cache/
+generated/automated-trading-system/output/
+generated/automated-trading-system/.venv/
 dist/
 build/
 *.log
