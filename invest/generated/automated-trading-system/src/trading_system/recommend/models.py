@@ -52,6 +52,7 @@ class Recommendation:
     news_summary: str = ""
     llm_status: str = "ok"  # ok | fallback | error
     data_refs: Dict[str, Any] = field(default_factory=dict)
+    research: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -67,6 +68,7 @@ class Recommendation:
             "news_summary": self.news_summary,
             "llm_status": self.llm_status,
             "data_refs": self.data_refs,
+            "research": self.research,
         }
 
 

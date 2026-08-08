@@ -403,10 +403,54 @@ class MarketDataFetcher:
         try:
             df = self._retry_fetch(_fetch)
             if df is not None and not df.empty:
-                self._write_cache(cache_key, df)
+                out = df.copy()
+                # THS abstract mixes bool False with percent strings — stringify objects
+                for col in out.columns:
+                    if out[col].dtype == object:
+                        out[col] = out[col].map(
+                            lambda x: "" if x is None or (isinstance(x, float) and pd.isna(x)) else str(x)
+                        )
+                self._write_cache(cache_key, out)
+                return out
             return df if df is not None else pd.DataFrame()
         except Exception:
             logger.warning("Failed to fetch financial data for %s", symbol)
+            return pd.DataFrame()
+
+    def get_valuation_data(self, symbol: str) -> pd.DataFrame:
+        """Get historical valuation series (PE/PB/PS) from East Money.
+
+        Args:
+            symbol: Stock code (e.g. 600519).
+
+        Returns:
+            DataFrame with daily valuation columns (PE(TTM), 市净率, ...).
+        """
+        cache_key = self._cache_key("valuation_em", symbol)
+        cached = self._read_cache(cache_key)
+        if cached is not None:
+            return cached
+
+        def _fetch():
+            import akshare as ak
+            df = ak.stock_value_em(symbol=str(symbol).zfill(6))
+            return df if df is not None else pd.DataFrame()
+
+        try:
+            df = self._retry_fetch(_fetch)
+            if df is not None and not df.empty:
+                # parquet-friendly: stringify date-like columns
+                out = df.copy()
+                for col in out.columns:
+                    if out[col].dtype == object:
+                        sample = out[col].dropna().head(1)
+                        if not sample.empty and hasattr(sample.iloc[0], "isoformat"):
+                            out[col] = out[col].astype(str)
+                self._write_cache(cache_key, out)
+                return out
+            return df if df is not None else pd.DataFrame()
+        except Exception:
+            logger.warning("Failed to fetch valuation data for %s", symbol)
             return pd.DataFrame()
 
     def get_market_sentiment_data(self) -> Dict[str, Any]:

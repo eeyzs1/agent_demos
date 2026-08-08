@@ -15,6 +15,20 @@ HINT_CN = {
     "avoid": "暂避",
 }
 
+VALUATION_CN = {
+    "cheap": "偏便宜",
+    "fair": "中性",
+    "expensive": "偏贵",
+    "unknown": "证据不足",
+}
+
+QUALITY_CN = {
+    "strong": "偏强",
+    "average": "一般",
+    "weak": "偏弱",
+    "unknown": "证据不足",
+}
+
 
 class ReportWriter:
     def __init__(self, report_dir: str = "output/reports"):
@@ -89,6 +103,25 @@ class ReportWriter:
                 f"**辅助因子**：基本面 {s.get('fundamental', 0):.2f} | "
                 f"资金 {s.get('capital_flow', 0):.2f}"
             )
+            research = getattr(rec, "research", None) or {}
+            if research:
+                vv = VALUATION_CN.get(
+                    str(research.get("valuation_view", "")),
+                    str(research.get("valuation_view", "")),
+                )
+                qv = QUALITY_CN.get(
+                    str(research.get("quality_view", "")),
+                    str(research.get("quality_view", "")),
+                )
+                lines.append(f"**投研观**：估值 {vv or '—'} | 质量 {qv or '—'}")
+                falsifiers = research.get("falsifiers") or []
+                if falsifiers:
+                    lines.append("**证伪条件**")
+                    for f in falsifiers:
+                        lines.append(f"- {f}")
+                caveats = research.get("caveats") or []
+                for c in caveats:
+                    lines.append(f"- ⚠ {c}")
             lines.append("")
             lines.append("**主要风险**")
             for risk in rec.risks:
@@ -101,10 +134,19 @@ class ReportWriter:
             lines.append("")
         else:
             one = rec.reasons[0].text if rec.reasons else ""
+            research = getattr(rec, "research", None) or {}
+            vv = research.get("valuation_view", "")
+            qv = research.get("quality_view", "")
+            research_bit = ""
+            if vv or qv:
+                research_bit = (
+                    f" / 估值 {VALUATION_CN.get(str(vv), vv)}"
+                    f" / 质量 {QUALITY_CN.get(str(qv), qv)}"
+                )
             lines.append(
                 f"- 技术 {rec.scores.get('tech_score', 0):.0f} / "
                 f"消息 {rec.scores.get('news_score', 0):.0f} / "
-                f"置信度 {rec.confidence:.0f}；{one}"
+                f"置信度 {rec.confidence:.0f}{research_bit}；{one}"
             )
             lines.append("")
         return lines

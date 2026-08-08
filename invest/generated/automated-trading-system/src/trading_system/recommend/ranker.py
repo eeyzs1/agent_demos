@@ -62,6 +62,7 @@ def build_recommendations(
             news_summary=str(item.get("news_summary", "")),
             llm_status=str(item.get("llm_status", "fallback")),
             data_refs={"news_count": len(item.get("news_items") or [])},
+            research=dict(item.get("research") or {}),
         )
         # normalize reason/risk types if dicts slipped through
         if rec.reasons and isinstance(rec.reasons[0], dict):

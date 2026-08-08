@@ -117,6 +117,7 @@ def main() -> int:
                 "news_summary": j.get("news_summary", ""),
                 "llm_status": "cursor-agent",
                 "news_items": (base or {}).get("news") or [],
+                "research": j.get("research") or {},
             }
         )
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare agent_brief.json with tech_score + news_score + raw news for Cursor judge."""
+"""Prepare agent_brief.json with tech_score + news_score + fundamentals + raw news."""
 
 from __future__ import annotations
 
@@ -14,16 +14,24 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from trading_system.core.env_loader import load_project_env
 from trading_system.core.config import get_config
+from trading_system.recommend.fundamentals import extract_fundamentals
 from trading_system.recommend.scoring import ScoringService
 from trading_system.recommend.universe import UniverseBuilder
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Prepare agent brief (dual scores)")
+    parser = argparse.ArgumentParser(
+        description="Prepare agent brief (dual scores + fundamentals)"
+    )
     parser.add_argument("--as-of", default=None, help="YYYY-MM-DD")
     parser.add_argument("--top", type=int, default=None, help="Candidates for agent judge")
     parser.add_argument("--max-score", type=int, default=None, help="Cap tech scoring universe")
     parser.add_argument("--config-dir", default="config")
+    parser.add_argument(
+        "--skip-fundamentals",
+        action="store_true",
+        help="Skip PE/PB/ROE fetch (faster smoke runs)",
+    )
     args = parser.parse_args()
 
     load_project_env(ROOT)
@@ -48,10 +56,19 @@ def main() -> int:
         enriched.to_json(snap / "scored.json", orient="records", force_ascii=False)
 
     news_scorer = scoring._news
+    fetcher = scoring._fetcher
     items = []
+    fund_ok = 0
     for _, row in enriched.iterrows():
         code = str(row["code"])
         ns = news_scorer.score_symbol(code)
+        fundamentals = (
+            {"data_sparse": True, "skipped": True}
+            if args.skip_fundamentals
+            else extract_fundamentals(code, fetcher)
+        )
+        if not fundamentals.get("data_sparse"):
+            fund_ok += 1
         items.append(
             {
                 "symbol": code,
@@ -69,6 +86,7 @@ def main() -> int:
                     "fundamental": float(row.get("fundamental", 0)),
                     "capital_flow": float(row.get("capital_flow", 0)),
                 },
+                "fundamentals": fundamentals,
                 "news": [
                     {
                         "title": a.get("title", ""),
@@ -92,28 +110,38 @@ def main() -> int:
                 f"{cfg.get('recommend.dual_scores.tech_weight', 0.6)}*tech + "
                 f"{cfg.get('recommend.dual_scores.news_weight', 0.4)}*news"
             ),
+            "fundamentals": (
+                "PE(TTM)/PB via stock_value_em; ROE/growth via financial abstract"
+            ),
         },
         "meta": {
             "scored": int(len(scored)) if scored is not None else 0,
             "candidates": len(items),
+            "fundamentals_ok": fund_ok,
             "top_n_report": int(cfg.get("recommend.top_n", 10)),
             "watchlist_n": int(cfg.get("recommend.watchlist_n", 10)),
             "prepared_at": datetime.now().isoformat(timespec="seconds"),
         },
         "candidates": items,
         "instruction": (
-            "Cursor agent: use tech_score + news_score + raw news[] to judge. "
+            "Cursor agent: use tech_score + news_score + fundamentals (pe_ttm/pb/roe) "
+            "+ raw news[] to judge. Apply a-share-research-enhance checklist. "
             "Write agent_judgments.json per skill judgment-schema, then finalize."
         ),
     }
     out = snap / "agent_brief.json"
     out.write_text(json.dumps(brief, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Wrote {out}")
-    print(f"Candidates: {len(items)} | Tech-scored universe: {brief['meta']['scored']}")
+    print(
+        f"Candidates: {len(items)} | Tech-scored: {brief['meta']['scored']} | "
+        f"Fundamentals OK: {fund_ok}"
+    )
     if items:
+        f0 = items[0].get("fundamentals") or {}
         print(
             f"Sample {items[0]['symbol']}: tech={items[0]['tech_score']} "
             f"news={items[0]['news_score']} combined={items[0]['combined_score']} "
+            f"pe={f0.get('pe_ttm')} pb={f0.get('pb')} roe={f0.get('roe')} "
             f"news_n={len(items[0]['news'])}"
         )
     return 0
